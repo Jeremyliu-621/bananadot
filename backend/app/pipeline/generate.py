@@ -24,6 +24,20 @@ from google import genai
 from google.genai import types
 
 
+# Component types where the user's uploaded image IS the canonical resting state.
+# For those, we pass the source through directly rather than asking Nano Banana to
+# re-render it — NB re-renders tend to add opaque plates / drift in silhouette /
+# shift the palette, and the user already cropped this exact state perfectly.
+# The other states still use the source as the *reference image*, so style
+# coherence across the set is preserved.
+SOURCE_IS_STATE: dict[str, str] = {
+    "button": "normal",
+    "panel": "normal",
+    # checkbox / progress_bar: ambiguous which state the user uploaded (checked
+    # vs unchecked, empty vs full), so we still call NB for all states.
+}
+
+
 STATE_INSTRUCTIONS: dict[str, dict[str, str]] = {
     "button": {
         "normal": (
@@ -88,9 +102,14 @@ def generate_variants(source_png: bytes, component_type: str) -> dict[str, bytes
         raise ValueError(f"Unknown component_type: {component_type!r}") from e
 
     client = genai.Client(api_key=settings.gemini_api_key)
+    passthrough_state = SOURCE_IS_STATE.get(component_type)
     results: dict[str, bytes] = {}
 
     for state, prompt in states.items():
+        if state == passthrough_state:
+            # Source IS this state. Don't re-render it — see SOURCE_IS_STATE comment.
+            results[state] = source_png
+            continue
         results[state] = _call_nano_banana(
             client=client,
             model=settings.gemini_image_model,
