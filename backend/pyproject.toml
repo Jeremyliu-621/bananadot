@@ -1,0 +1,30 @@
+[project]
+name = "bananadot-backend"
+version = "0.0.1"
+description = "Image-to-Godot-UI-component pipeline backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.12",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "google-genai>=0.3",
+    "pillow>=11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

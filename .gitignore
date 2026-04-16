@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Secrets & local config
+.env
+.env.local
+*.local
+
+# Generated outputs (pipeline artifacts, zip bundles, scratch inputs)
+outputs/
+tmp/
+scratch/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

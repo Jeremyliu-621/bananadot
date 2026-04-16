@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bananadot</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --fg: #ededed;
+      --muted: #888;
+      --faint: #4a4a4a;
+      --line: #1c1c1c;
+      --line-strong: #2a2a2a;
+      --accent: #f5c518;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+    body { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5; font-weight: 400; -webkit-font-smoothing: antialiased; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    a { color: inherit; text-decoration: none; }
+    a:hover { color: var(--fg); }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header .brand { font-weight: 500; letter-spacing: -0.01em; }
+    header nav { display: flex; gap: 20px; color: var(--muted); font-size: 13px; }
+
+    main { max-width: 720px; margin: 0 auto; padding: 72px 32px; }
+
+    /* Titles */
+    h1 { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; }
+    .lede { color: var(--muted); margin: 0 0 40px; }
+    .eyebrow { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+
+    /* Drop zone */
+    .dropzone {
+      display: block; cursor: pointer;
+      border: 1px dashed var(--line-strong);
+      padding: 56px 24px;
+      text-align: center;
+      transition: border-color .15s, background .15s;
+    }
+    .dropzone:hover, .dropzone.dragging { border-color: var(--muted); background: rgba(255,255,255,0.01); }
+    .dropzone .primary-line { font-size: 14px; color: var(--fg); }
+    .dropzone .hint { color: var(--faint); font-size: 12px; margin-top: 6px; }
+
+    /* Buttons */
+    button { font: inherit; cursor: pointer; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      height: 36px; padding: 0 14px;
+      border-radius: 0;
+      background: var(--fg); color: var(--bg); border: 1px solid var(--fg);
+      font-size: 13px; font-weight: 500;
+      transition: opacity .15s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-accent { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn-ghost {
+      background: transparent; color: var(--muted); border: 1px solid var(--line-strong);
+    }
+    .btn-ghost:hover { color: var(--fg); border-color: var(--muted); }
+
+    /* Configure layout */
+    .configure { display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: start; }
+    @media (max-width: 640px) { .configure { grid-template-columns: 1fr; } }
+    .source-preview {
+      aspect-ratio: 1;
+      border: 1px solid var(--line);
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 14px 14px;
+      display: grid; place-items: center; overflow: hidden;
+    }
+    .source-preview img { max-width: 80%; max-height: 80%; display: block; }
+    .meta-row {
+      display: flex; justify-content: space-between;
+      color: var(--faint); font-size: 11px; margin-top: 8px;
+    }
+
+    /* Component type — list, not grid */
+    .type-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); margin-bottom: 32px; }
+    .type-list label {
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      cursor: pointer;
+    }
+    .type-list label.disabled { cursor: not-allowed; color: var(--faint); }
+    .type-list label.selected .marker { background: var(--accent); border-color: var(--accent); }
+    .type-list label.selected .marker::after { background: #000; }
+    .type-list .name { font-size: 13px; }
+    .type-list .hint { color: var(--faint); font-size: 11px; }
+    .type-list .marker {
+      display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+      border: 1px solid var(--line-strong); margin-right: 10px; position: relative; vertical-align: middle;
+    }
+    .type-list .marker::after {
+      content: ""; position: absolute; inset: 3px; border-radius: 50%; background: transparent;
+    }
+
+    .actions { display: flex; align-items: center; gap: 12px; }
+    .actions .hint { color: var(--faint); font-size: 11px; margin-left: 4px; }
+
+    /* Steps */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    /* Generating */
+    .generating {
+      padding: 72px 0; text-align: left; display: flex; align-items: center; gap: 14px;
+    }
+    .dot-pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+    .elapsed { color: var(--faint); }
+
+    /* Results */
+    .variants {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+      background: var(--line); border: 1px solid var(--line);
+      margin-bottom: 40px;
+    }
+    @media (max-width: 640px) { .variants { grid-template-columns: repeat(2, 1fr); } }
+    .variant {
+      background: var(--bg);
+      display: flex; flex-direction: column;
+    }
+    .variant .preview {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 12px 12px;
+      display: grid; place-items: center;
+    }
+    .variant .preview img { max-width: 75%; max-height: 75%; display: block; }
+    .variant .label {
+      padding: 8px 10px;
+      font-size: 11px; color: var(--muted);
+      border-top: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* Live preview */
+    .live-row {
+      display: flex; align-items: center; gap: 24px;
+      padding: 32px 0; margin-bottom: 32px;
+      border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    }
+    .live-button {
+      width: 120px; height: 120px;
+      background-repeat: no-repeat; background-position: center; background-size: contain;
+      background-color: transparent; border: none; padding: 0;
+      background-image: var(--tex-normal);
+    }
+    .live-button:hover { background-image: var(--tex-hover); }
+    .live-button:active { background-image: var(--tex-pressed); }
+    .live-button:disabled { background-image: var(--tex-disabled); cursor: not-allowed; }
+    .live-meta { flex: 1; }
+    .live-meta .title { font-size: 13px; color: var(--fg); margin-bottom: 4px; }
+    .live-meta .hint { font-size: 12px; color: var(--muted); }
+    .live-meta .toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .live-meta .toggle input { accent-color: var(--accent); }
+
+    .pixel-art .live-button, .pixel-art .variant .preview img, .pixel-art .source-preview img {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+    }
+
+    .bundle-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .bundle-meta { color: var(--faint); font-size: 11px; }
+
+    /* Error */
+    .error-box {
+      border: 1px solid var(--line-strong);
+      padding: 16px;
+      font-size: 12px; color: var(--muted);
+      white-space: pre-wrap; word-break: break-word;
+      margin-bottom: 20px;
+    }
+
+    /* Godot install steps */
+    .godot-steps {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .godot-steps ol {
+      list-style: none; counter-reset: step;
+      padding: 0; margin: 14px 0 0;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .godot-steps li {
+      counter-increment: step;
+      display: grid; grid-template-columns: 20px 1fr; gap: 12px;
+      font-size: 13px; color: var(--fg);
+    }
+    .godot-steps li::before {
+      content: counter(step);
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding-top: 2px;
+    }
+    .godot-steps li .detail {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .godot-steps code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      padding: 1px 6px;
+      color: var(--fg);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">bananadot</div>
+    <nav>
+      <a href="/docs">API</a>
+      <a href="/health">Status</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- upload -->
+    <section id="step-upload" class="step active">
+      <div class="eyebrow">image &rarr; godot</div>
+      <h1>Drop a UI element.</h1>
+      <p class="lede">One cropped image in. Matching state variants and a drop-in Godot folder out.</p>
+
+      <label id="dropzone" class="dropzone">
+        <div class="primary-line">Drop an image here, or click to browse.</div>
+        <div class="hint mono">PNG or JPG &middot; already cropped to the element</div>
+        <input id="file-input" type="file" accept="image/*" hidden />
+      </label>
+    </section>
+
+    <!-- configure -->
+    <section id="step-configure" class="step">
+      <div class="eyebrow">configure</div>
+      <h1>Confirm the input.</h1>
+      <p class="lede">Pick what this is. We'll generate the matching states.</p>
+
+      <div class="configure">
+        <div>
+          <div class="source-preview"><img id="source-image" alt="source" /></div>
+          <div class="meta-row mono">
+            <span id="source-name">—</span>
+            <span id="source-dims">—</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="type-list">
+            <label class="selected">
+              <span><span class="marker"></span><span class="name">Button</span></span>
+              <span class="hint mono">normal / hover / pressed / disabled</span>
+              <input type="radio" name="component-type" value="button" hidden checked />
+            </label>
+            <label class="disabled">
+              <span><span class="marker"></span><span class="name">Panel</span></span>
+              <span class="hint mono">soon</span>
+              <input type="radio" name="component-type" value="panel" hidden disabled />
+            </label>
+            <label class="disabled">
+              <span><span class="marker"></span><span class="name">Checkbox</span></span>
+              <span class="hint mono">soon</span>
+              <input type="radio" name="component-type" value="checkbox" hidden disabled />
+            </label>
+            <label class="disabled">
+              <span><span class="marker"></span><span class="name">Progress bar</span></span>
+              <span class="hint mono">soon</span>
+              <input type="radio" name="component-type" value="progress_bar" hidden disabled />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="btn-generate" class="btn btn-accent">Generate</button>
+            <button id="btn-back-upload" class="btn btn-ghost">Use a different image</button>
+            <span class="hint mono">~30s</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- generating -->
+    <section id="step-generating" class="step">
+      <div class="eyebrow">working</div>
+      <h1>Generating.</h1>
+      <div class="generating">
+        <span class="dot-pulse"></span>
+        <span id="generating-status">Calling Nano Banana&hellip;</span>
+        <span class="elapsed mono">&middot; <span id="generating-elapsed">0s</span></span>
+      </div>
+    </section>
+
+    <!-- results -->
+    <section id="step-results" class="step">
+      <div class="eyebrow">done</div>
+      <h1>Component ready.</h1>
+      <p class="lede">Here are the states. The button below is real &mdash; hover, click, toggle disabled.</p>
+
+      <div class="variants" id="variants-grid"></div>
+
+      <div class="live-row">
+        <button id="live-button" class="live-button"></button>
+        <div class="live-meta">
+          <div class="title">Live preview</div>
+          <div class="hint">Behaves exactly like the Godot <span class="mono">TextureButton</span> will.</div>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-disabled" />
+            disabled
+          </label>
+        </div>
+      </div>
+
+      <div class="bundle-row">
+        <span id="bundle-meta" class="bundle-meta mono">—</span>
+        <div class="actions">
+          <button id="btn-restart" class="btn btn-ghost">Start over</button>
+          <button id="btn-download" class="btn btn-accent">Download zip</button>
+        </div>
+      </div>
+
+      <div class="godot-steps">
+        <div class="eyebrow">use in godot</div>
+        <ol>
+          <li>
+            <div>
+              Unzip the file.
+              <div class="detail">You should get a folder named <code id="step-folder-name">bananadot_button</code>.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              Move that folder into your Godot 4 project's root.
+              <div class="detail">It should sit next to your <code>project.godot</code> file. Godot will show it at <code id="step-res-path">res://bananadot_button/</code>.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              In Godot, open <code id="step-scene-path">bananadot_button/example.tscn</code>.
+              <div class="detail">Run the scene (F6) — hover and click the button to see the states work.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              To use it in your own scenes, either instance <code>example.tscn</code> as a <code>PackedScene</code>, or add a <code>TextureButton</code> node and point its texture properties at the PNGs in <code>assets/</code>.
+              <div class="detail">Full notes are in the <code>README.md</code> inside the folder.</div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- error -->
+    <section id="step-error" class="step">
+      <div class="eyebrow">error</div>
+      <h1>Something went wrong.</h1>
+      <div id="error-detail" class="error-box mono">—</div>
+      <button id="btn-retry" class="btn btn-ghost">Try again</button>
+    </section>
+
+  </main>
+
+  <script>
+    const steps = ['upload', 'configure', 'generating', 'results', 'error'];
+    const state = { file: null, componentType: 'button', result: null, elapsedTimer: null };
+
+    function show(step) {
+      steps.forEach(s => document.getElementById('step-' + s).classList.toggle('active', s === step));
+    }
+
+    // upload
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragging'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragging'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); dropzone.classList.remove('dragging');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) { showError('That file is not an image.'); return; }
+      state.file = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById('source-image');
+        img.src = e.target.result;
+        img.onload = () => {
+          document.getElementById('source-dims').textContent = img.naturalWidth + ' × ' + img.naturalHeight;
+        };
+        document.getElementById('source-name').textContent = file.name;
+        show('configure');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // configure
+    document.querySelectorAll('.type-list label').forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (opt.classList.contains('disabled')) return;
+        document.querySelectorAll('.type-list label').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        state.componentType = opt.querySelector('input').value;
+      });
+    });
+    document.getElementById('btn-back-upload').addEventListener('click', () => {
+      state.file = null; fileInput.value = ''; show('upload');
+    });
+    document.getElementById('btn-generate').addEventListener('click', generate);
+
+    // generating
+    const STATUS_MESSAGES = [
+      { at: 0,  text: 'Calling Nano Banana…' },
+      { at: 3,  text: 'Rendering normal state…' },
+      { at: 10, text: 'Now the hover state…' },
+      { at: 18, text: 'Pressed state…' },
+      { at: 26, text: 'Finishing with disabled…' },
+      { at: 34, text: 'Packaging the Godot bundle…' },
+    ];
+
+    async function generate() {
+      if (!state.file) return;
+      show('generating');
+
+      const start = Date.now();
+      state.elapsedTimer = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        document.getElementById('generating-elapsed').textContent = s + 's';
+        const msg = [...STATUS_MESSAGES].reverse().find(m => s >= m.at);
+        if (msg) document.getElementById('generating-status').textContent = msg.text;
+      }, 1000);
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('component_type', state.componentType);
+        const res = await fetch('/preview', { method: 'POST', body: form });
+        if (!res.ok) { throw new Error(await res.text() || `HTTP ${res.status}`); }
+        const data = await res.json();
+        state.result = data;
+        clearInterval(state.elapsedTimer);
+        renderResults(data);
+        show('results');
+      } catch (err) {
+        clearInterval(state.elapsedTimer);
+        showError(err.message || String(err));
+      }
+    }
+
+    // results
+    function renderResults(data) {
+      document.body.classList.toggle('pixel-art', !!data.is_pixel_art);
+
+      const grid = document.getElementById('variants-grid');
+      grid.innerHTML = '';
+      const cards = [
+        { label: 'source',   url: data.source },
+        { label: 'normal',   url: data.variants.normal },
+        { label: 'hover',    url: data.variants.hover },
+        { label: 'pressed',  url: data.variants.pressed },
+        { label: 'disabled', url: data.variants.disabled },
+      ];
+      for (const c of cards) {
+        if (!c.url) continue;
+        const el = document.createElement('div');
+        el.className = 'variant';
+        el.innerHTML = `
+          <div class="preview"><img src="${c.url}" alt="${c.label}" /></div>
+          <div class="label mono"><span>${c.label}</span></div>`;
+        grid.appendChild(el);
+      }
+
+      const live = document.getElementById('live-button');
+      live.style.setProperty('--tex-normal',   `url('${data.variants.normal}')`);
+      live.style.setProperty('--tex-hover',    `url('${data.variants.hover    || data.variants.normal}')`);
+      live.style.setProperty('--tex-pressed',  `url('${data.variants.pressed  || data.variants.normal}')`);
+      live.style.setProperty('--tex-disabled', `url('${data.variants.disabled || data.variants.normal}')`);
+      live.disabled = false;
+      document.getElementById('toggle-disabled').checked = false;
+
+      const sizeKb = Math.ceil(data.zip_base64.length * 0.75 / 1024);
+      const folder = `bananadot_${data.component_type}`;
+      document.getElementById('bundle-meta').textContent = `${data.zip_name} · ${sizeKb} KB`;
+      document.getElementById('step-folder-name').textContent = folder;
+      document.getElementById('step-res-path').textContent = `res://${folder}/`;
+      document.getElementById('step-scene-path').textContent = `${folder}/example.tscn`;
+    }
+
+    document.getElementById('toggle-disabled').addEventListener('change', (e) => {
+      document.getElementById('live-button').disabled = e.target.checked;
+    });
+
+    document.getElementById('btn-download').addEventListener('click', () => {
+      const data = state.result; if (!data) return;
+      const bytes = Uint8Array.from(atob(data.zip_base64), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = data.zip_name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      state.file = null; state.result = null; fileInput.value = '';
+      show('upload');
+    });
+
+    function showError(detail) {
+      document.getElementById('error-detail').textContent = detail;
+      show('error');
+    }
+    document.getElementById('btn-retry').addEventListener('click', () => {
+      show(state.file ? 'configure' : 'upload');
+    });
+  </script>
+</body>
+</html>
