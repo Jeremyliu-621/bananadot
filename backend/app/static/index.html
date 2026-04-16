@@ -125,11 +125,11 @@
 
     /* Results */
     .variants {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+      display: grid; gap: 1px;
       background: var(--line); border: 1px solid var(--line);
       margin-bottom: 40px;
     }
-    @media (max-width: 640px) { .variants { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .variants { grid-template-columns: repeat(2, 1fr) !important; } }
     .variant {
       background: var(--bg);
       display: flex; flex-direction: column;
@@ -147,12 +147,33 @@
       display: flex; align-items: center; justify-content: space-between;
     }
 
-    /* Live preview */
+    /* Live preview — shared shell */
     .live-row {
       display: flex; align-items: center; gap: 24px;
       padding: 32px 0; margin-bottom: 32px;
       border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
     }
+    .live-stage {
+      flex: 0 0 auto;
+      min-width: 120px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .live-widget { display: none; }
+    .live-widget.active { display: block; }
+
+    .live-meta { flex: 1; }
+    .live-meta .title { font-size: 13px; color: var(--fg); margin-bottom: 4px; }
+    .live-meta .hint { font-size: 12px; color: var(--muted); }
+    .live-meta .control { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .live-meta .control input[type="checkbox"] { accent-color: var(--accent); }
+    .live-meta .control input[type="range"] {
+      accent-color: var(--accent); width: 160px;
+    }
+    .live-meta .control .range-value {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); min-width: 3ch; text-align: right;
+    }
+
+    /* Button widget */
     .live-button {
       width: 120px; height: 120px;
       background-repeat: no-repeat; background-position: center; background-size: contain;
@@ -162,13 +183,66 @@
     .live-button:hover { background-image: var(--tex-hover); }
     .live-button:active { background-image: var(--tex-pressed); }
     .live-button:disabled { background-image: var(--tex-disabled); cursor: not-allowed; }
-    .live-meta { flex: 1; }
-    .live-meta .title { font-size: 13px; color: var(--fg); margin-bottom: 4px; }
-    .live-meta .hint { font-size: 12px; color: var(--muted); }
-    .live-meta .toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
-    .live-meta .toggle input { accent-color: var(--accent); }
 
-    .pixel-art .live-button, .pixel-art .variant .preview img, .pixel-art .source-preview img {
+    /* Checkbox widget — toggle on click, same sprite-swap dynamic as a
+       Godot TextureButton with toggle_mode=true. */
+    .live-checkbox {
+      width: 80px; height: 80px;
+      background: transparent;
+      background-image: var(--tex-unchecked);
+      background-repeat: no-repeat; background-position: center; background-size: contain;
+      border: none; padding: 0; cursor: pointer;
+    }
+    .live-checkbox[data-checked="true"] { background-image: var(--tex-checked); }
+
+    /* Panel widget — CSS border-image is the closest real 9-slice in the
+       browser. 25% slice + fill matches what most hand-drawn frames want;
+       panel.py auto-computes the equivalent patch_margin on the Godot side. */
+    .live-panel {
+      width: 280px;
+      min-height: 140px;
+      padding: 22px 24px;
+      border-style: solid;
+      border-width: 16px;
+      border-image-source: var(--tex-normal);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      color: var(--fg);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .live-panel .panel-sample-title {
+      font-weight: 500; font-size: 13px; margin-bottom: 4px;
+    }
+    .live-panel .panel-sample-body {
+      color: var(--muted);
+    }
+
+    /* Progress bar widget — the full texture is revealed left-to-right by a
+       clip-path driven off the range slider, same reveal direction as
+       TextureProgressBar with fill_mode=0. */
+    .live-progress {
+      position: relative;
+      width: 280px;
+      background-image: var(--tex-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+    }
+    .live-progress .fill {
+      position: absolute; inset: 0;
+      background-image: var(--tex-full);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 calc(100% - var(--progress-pct, 50%)) 0 0);
+    }
+
+    .pixel-art .live-button,
+    .pixel-art .live-checkbox,
+    .pixel-art .live-panel,
+    .pixel-art .live-progress,
+    .pixel-art .live-progress .fill,
+    .pixel-art .variant .preview img,
+    .pixel-art .source-preview img {
       image-rendering: pixelated;
       image-rendering: -moz-crisp-edges;
     }
@@ -215,6 +289,11 @@
       font-size: 12px;
       margin-top: 2px;
     }
+    .godot-steps .prop-list {
+      list-style: none; padding: 0; margin: 6px 0 0;
+      display: flex; flex-direction: column; gap: 2px;
+      color: var(--muted); font-size: 12px;
+    }
     .godot-steps code {
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
@@ -260,8 +339,8 @@
         <div>
           <div class="source-preview"><img id="source-image" alt="source" /></div>
           <div class="meta-row mono">
-            <span id="source-name">—</span>
-            <span id="source-dims">—</span>
+            <span id="source-name">&mdash;</span>
+            <span id="source-dims">&mdash;</span>
           </div>
         </div>
 
@@ -272,27 +351,27 @@
               <span class="hint mono">normal / hover / pressed / disabled</span>
               <input type="radio" name="component-type" value="button" hidden checked />
             </label>
-            <label class="disabled">
+            <label>
               <span><span class="marker"></span><span class="name">Panel</span></span>
-              <span class="hint mono">soon</span>
-              <input type="radio" name="component-type" value="panel" hidden disabled />
+              <span class="hint mono">9-slice frame &middot; 1 state</span>
+              <input type="radio" name="component-type" value="panel" hidden />
             </label>
-            <label class="disabled">
+            <label>
               <span><span class="marker"></span><span class="name">Checkbox</span></span>
-              <span class="hint mono">soon</span>
-              <input type="radio" name="component-type" value="checkbox" hidden disabled />
+              <span class="hint mono">unchecked / checked</span>
+              <input type="radio" name="component-type" value="checkbox" hidden />
             </label>
-            <label class="disabled">
+            <label>
               <span><span class="marker"></span><span class="name">Progress bar</span></span>
-              <span class="hint mono">soon</span>
-              <input type="radio" name="component-type" value="progress_bar" hidden disabled />
+              <span class="hint mono">empty / full</span>
+              <input type="radio" name="component-type" value="progress_bar" hidden />
             </label>
           </div>
 
           <div class="actions">
             <button id="btn-generate" class="btn btn-accent">Generate</button>
             <button id="btn-back-upload" class="btn btn-ghost">Use a different image</button>
-            <span class="hint mono">~30s</span>
+            <span id="configure-eta" class="hint mono">~30s</span>
           </div>
         </div>
       </div>
@@ -312,25 +391,32 @@
     <!-- results -->
     <section id="step-results" class="step">
       <div class="eyebrow">done</div>
-      <h1>Component ready.</h1>
-      <p class="lede">Here are the states. The button below is real &mdash; hover, click, toggle disabled.</p>
+      <h1 id="results-title">Component ready.</h1>
+      <p class="lede" id="results-lede">Here are the states. The widget below is real &mdash; try it.</p>
 
       <div class="variants" id="variants-grid"></div>
 
       <div class="live-row">
-        <button id="live-button" class="live-button"></button>
+        <div class="live-stage">
+          <button id="live-button" class="live-widget live-button"></button>
+          <button id="live-checkbox" class="live-widget live-checkbox" data-checked="false" aria-pressed="false"></button>
+          <div id="live-panel" class="live-widget live-panel">
+            <div class="panel-sample-title">Panel content</div>
+            <div class="panel-sample-body">Stretches freely &mdash; corners stay crisp thanks to the 9-slice.</div>
+          </div>
+          <div id="live-progress" class="live-widget live-progress" style="--progress-pct: 50%;">
+            <div class="fill"></div>
+          </div>
+        </div>
         <div class="live-meta">
           <div class="title">Live preview</div>
-          <div class="hint">Behaves exactly like the Godot <span class="mono">TextureButton</span> will.</div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-disabled" />
-            disabled
-          </label>
+          <div class="hint" id="live-hint">&mdash;</div>
+          <div id="live-controls"></div>
         </div>
       </div>
 
       <div class="bundle-row">
-        <span id="bundle-meta" class="bundle-meta mono">—</span>
+        <span id="bundle-meta" class="bundle-meta mono">&mdash;</span>
         <div class="actions">
           <button id="btn-restart" class="btn btn-ghost">Start over</button>
           <button id="btn-download" class="btn btn-accent">Download zip</button>
@@ -355,12 +441,13 @@
           <li>
             <div>
               In Godot, open <code id="step-scene-path">bananadot_button/example.tscn</code>.
-              <div class="detail">Run the scene (F6) — hover and click the button to see the states work.</div>
+              <div class="detail" id="step-run-hint">Run the scene (F6) &mdash; hover and click the button to see the states work.</div>
             </div>
           </li>
           <li>
             <div>
-              To use it in your own scenes, either instance <code>example.tscn</code> as a <code>PackedScene</code>, or add a <code>TextureButton</code> node and point its texture properties at the PNGs in <code>assets/</code>.
+              To use it in your own scenes, either instance <code>example.tscn</code> as a <code>PackedScene</code>, or add a <code id="step-node-type">TextureButton</code> node and wire its texture properties to the PNGs in <code>assets/</code>.
+              <ul class="prop-list" id="step-prop-list"></ul>
               <div class="detail">Full notes are in the <code>README.md</code> inside the folder.</div>
             </div>
           </li>
@@ -372,13 +459,82 @@
     <section id="step-error" class="step">
       <div class="eyebrow">error</div>
       <h1>Something went wrong.</h1>
-      <div id="error-detail" class="error-box mono">—</div>
+      <div id="error-detail" class="error-box mono">&mdash;</div>
       <button id="btn-retry" class="btn btn-ghost">Try again</button>
     </section>
 
   </main>
 
   <script>
+    // --- component registry -------------------------------------------------
+    // Mirrors backend/app/pipeline/godot.py._SPECS. Keep them in sync when
+    // adding a new component: states list, live-widget id, Godot node type,
+    // run hint, and the texture-prop → asset-path map shown in step 4.
+    const COMPONENTS = {
+      button: {
+        states: ['normal', 'hover', 'pressed', 'disabled'],
+        widgetId: 'live-button',
+        resultsLede: "Here are the states. The button below is real — hover, click, toggle disabled.",
+        liveHint: "Behaves exactly like the Godot TextureButton will.",
+        controls: 'button',
+        godot: {
+          nodeType: 'TextureButton',
+          runHint: 'hover and click the button to see the states work',
+          props: [
+            ['texture_normal',   'assets/normal.png'],
+            ['texture_pressed',  'assets/pressed.png'],
+            ['texture_hover',    'assets/hover.png'],
+            ['texture_disabled', 'assets/disabled.png'],
+          ],
+        },
+      },
+      panel: {
+        states: ['normal'],
+        widgetId: 'live-panel',
+        resultsLede: "Single panel sprite. Below, it stretches as a 9-slice — same math Godot's NinePatchRect will run.",
+        liveHint: "Renders like a Godot NinePatchRect — the frame scales, corners don't.",
+        controls: 'panel',
+        godot: {
+          nodeType: 'NinePatchRect',
+          runHint: "drag the node's size in the editor — the frame stretches and corners stay crisp",
+          props: [
+            ['texture', 'assets/normal.png'],
+          ],
+        },
+      },
+      checkbox: {
+        states: ['unchecked', 'checked'],
+        widgetId: 'live-checkbox',
+        resultsLede: "Two states for a toggle. Click the widget below to flip between them.",
+        liveHint: "Behaves like a Godot TextureButton with toggle_mode = true.",
+        controls: 'checkbox',
+        godot: {
+          nodeType: 'TextureButton',
+          runHint: 'click the button to toggle between unchecked and checked',
+          props: [
+            ['toggle_mode',     'true'],
+            ['texture_normal',  'assets/unchecked.png'],
+            ['texture_pressed', 'assets/checked.png'],
+          ],
+        },
+      },
+      progress_bar: {
+        states: ['empty', 'full'],
+        widgetId: 'live-progress',
+        resultsLede: "Two states — empty frame and full fill. The slider below reveals the fill exactly how Godot will at runtime.",
+        liveHint: "Reveals left-to-right like a Godot TextureProgressBar.",
+        controls: 'progress_bar',
+        godot: {
+          nodeType: 'TextureProgressBar',
+          runHint: 'drag the value property in the inspector to watch the fill reveal left-to-right',
+          props: [
+            ['texture_under',    'assets/empty.png'],
+            ['texture_progress', 'assets/full.png'],
+          ],
+        },
+      },
+    };
+
     const steps = ['upload', 'configure', 'generating', 'results', 'error'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null };
 
@@ -386,7 +542,7 @@
       steps.forEach(s => document.getElementById('step-' + s).classList.toggle('active', s === step));
     }
 
-    // upload
+    // --- upload -------------------------------------------------------------
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
     dropzone.addEventListener('click', () => fileInput.click());
@@ -418,13 +574,17 @@
       reader.readAsDataURL(file);
     }
 
-    // configure
+    // --- configure ----------------------------------------------------------
     document.querySelectorAll('.type-list label').forEach(opt => {
       opt.addEventListener('click', () => {
         if (opt.classList.contains('disabled')) return;
         document.querySelectorAll('.type-list label').forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
         state.componentType = opt.querySelector('input').value;
+        // Tiny ETA nudge: panel does 1 gen call, others do 2–4.
+        const states = COMPONENTS[state.componentType].states.length;
+        const sec = 8 + states * 8;
+        document.getElementById('configure-eta').textContent = `~${sec}s`;
       });
     });
     document.getElementById('btn-back-upload').addEventListener('click', () => {
@@ -432,13 +592,13 @@
     });
     document.getElementById('btn-generate').addEventListener('click', generate);
 
-    // generating
+    // --- generating ---------------------------------------------------------
     const STATUS_MESSAGES = [
       { at: 0,  text: 'Calling Nano Banana…' },
-      { at: 3,  text: 'Rendering normal state…' },
-      { at: 10, text: 'Now the hover state…' },
-      { at: 18, text: 'Pressed state…' },
-      { at: 26, text: 'Finishing with disabled…' },
+      { at: 3,  text: 'Rendering first state…' },
+      { at: 10, text: 'Next state…' },
+      { at: 18, text: 'Still generating…' },
+      { at: 26, text: 'Finishing up…' },
       { at: 34, text: 'Packaging the Godot bundle…' },
     ];
 
@@ -471,21 +631,21 @@
       }
     }
 
-    // results
+    // --- results ------------------------------------------------------------
     function renderResults(data) {
       document.body.classList.toggle('pixel-art', !!data.is_pixel_art);
 
+      const spec = COMPONENTS[data.component_type] || COMPONENTS.button;
+
+      // Variants grid: source + every state this component defines (if present).
       const grid = document.getElementById('variants-grid');
       grid.innerHTML = '';
-      const cards = [
-        { label: 'source',   url: data.source },
-        { label: 'normal',   url: data.variants.normal },
-        { label: 'hover',    url: data.variants.hover },
-        { label: 'pressed',  url: data.variants.pressed },
-        { label: 'disabled', url: data.variants.disabled },
-      ];
+      const cards = [{ label: 'source', url: data.source }];
+      for (const s of spec.states) {
+        if (data.variants[s]) cards.push({ label: s, url: data.variants[s] });
+      }
+      grid.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
       for (const c of cards) {
-        if (!c.url) continue;
         const el = document.createElement('div');
         el.className = 'variant';
         el.innerHTML = `
@@ -494,25 +654,131 @@
         grid.appendChild(el);
       }
 
-      const live = document.getElementById('live-button');
-      live.style.setProperty('--tex-normal',   `url('${data.variants.normal}')`);
-      live.style.setProperty('--tex-hover',    `url('${data.variants.hover    || data.variants.normal}')`);
-      live.style.setProperty('--tex-pressed',  `url('${data.variants.pressed  || data.variants.normal}')`);
-      live.style.setProperty('--tex-disabled', `url('${data.variants.disabled || data.variants.normal}')`);
-      live.disabled = false;
-      document.getElementById('toggle-disabled').checked = false;
+      // Copy + controls.
+      document.getElementById('results-lede').textContent = spec.resultsLede;
+      document.getElementById('live-hint').textContent = spec.liveHint;
 
-      const sizeKb = Math.ceil(data.zip_base64.length * 0.75 / 1024);
+      // Swap which live widget is active, wire its CSS textures + controls.
+      document.querySelectorAll('.live-widget').forEach(w => w.classList.remove('active'));
+      const widget = document.getElementById(spec.widgetId);
+      widget.classList.add('active');
+      wireLiveWidget(data, spec);
+
+      // Install-step copy.
       const folder = `bananadot_${data.component_type}`;
-      document.getElementById('bundle-meta').textContent = `${data.zip_name} · ${sizeKb} KB`;
+      document.getElementById('bundle-meta').textContent =
+        `${data.zip_name} · ${Math.ceil(data.zip_base64.length * 0.75 / 1024)} KB`;
       document.getElementById('step-folder-name').textContent = folder;
       document.getElementById('step-res-path').textContent = `res://${folder}/`;
       document.getElementById('step-scene-path').textContent = `${folder}/example.tscn`;
+      document.getElementById('step-run-hint').textContent =
+        `Run the scene (F6) — ${spec.godot.runHint}.`;
+      document.getElementById('step-node-type').textContent = spec.godot.nodeType;
+
+      const propList = document.getElementById('step-prop-list');
+      propList.innerHTML = '';
+      for (const [prop, assetPath] of spec.godot.props) {
+        const li = document.createElement('li');
+        // `toggle_mode = true` is a bool, not an asset path — render as-is.
+        const isAsset = assetPath.startsWith('assets/');
+        li.innerHTML = isAsset
+          ? `<code>${prop}</code> → <code>${assetPath}</code>`
+          : `<code>${prop}</code> = <code>${assetPath}</code>`;
+        propList.appendChild(li);
+      }
     }
 
-    document.getElementById('toggle-disabled').addEventListener('change', (e) => {
-      document.getElementById('live-button').disabled = e.target.checked;
-    });
+    function wireLiveWidget(data, spec) {
+      const controls = document.getElementById('live-controls');
+      controls.innerHTML = '';
+
+      if (spec.controls === 'button') {
+        const live = document.getElementById('live-button');
+        const norm = data.variants.normal;
+        live.style.setProperty('--tex-normal',   `url('${norm}')`);
+        live.style.setProperty('--tex-hover',    `url('${data.variants.hover    || norm}')`);
+        live.style.setProperty('--tex-pressed',  `url('${data.variants.pressed  || norm}')`);
+        live.style.setProperty('--tex-disabled', `url('${data.variants.disabled || norm}')`);
+        live.disabled = false;
+
+        const label = document.createElement('label');
+        label.className = 'control';
+        label.innerHTML = `<input type="checkbox" id="toggle-disabled" /> disabled`;
+        controls.appendChild(label);
+        label.querySelector('input').addEventListener('change', (e) => {
+          live.disabled = e.target.checked;
+        });
+      }
+
+      else if (spec.controls === 'checkbox') {
+        const live = document.getElementById('live-checkbox');
+        const unchecked = data.variants.unchecked;
+        live.style.setProperty('--tex-unchecked', `url('${unchecked}')`);
+        live.style.setProperty('--tex-checked',   `url('${data.variants.checked || unchecked}')`);
+        live.dataset.checked = 'false';
+        live.setAttribute('aria-pressed', 'false');
+        // Single listener per render — replace the node to drop old handlers.
+        const fresh = live.cloneNode(true);
+        live.parentNode.replaceChild(fresh, live);
+        fresh.addEventListener('click', () => {
+          const next = fresh.dataset.checked !== 'true';
+          fresh.dataset.checked = String(next);
+          fresh.setAttribute('aria-pressed', String(next));
+        });
+
+        const info = document.createElement('div');
+        info.className = 'control';
+        info.innerHTML = `click the widget to toggle`;
+        controls.appendChild(info);
+      }
+
+      else if (spec.controls === 'panel') {
+        const live = document.getElementById('live-panel');
+        live.style.setProperty('--tex-normal', `url('${data.variants.normal}')`);
+        live.style.width = '';  // drop any inline override from a previous render
+
+        const wrap = document.createElement('label');
+        wrap.className = 'control';
+        wrap.innerHTML = `
+          size
+          <input type="range" id="panel-size" min="160" max="420" value="280" />
+          <span id="panel-size-value" class="range-value">280</span>`;
+        controls.appendChild(wrap);
+        const range = wrap.querySelector('#panel-size');
+        const val = wrap.querySelector('#panel-size-value');
+        range.addEventListener('input', (e) => {
+          live.style.width = e.target.value + 'px';
+          val.textContent = e.target.value;
+        });
+      }
+
+      else if (spec.controls === 'progress_bar') {
+        const live = document.getElementById('live-progress');
+        const empty = data.variants.empty;
+        live.style.setProperty('--tex-empty', `url('${empty}')`);
+        live.style.setProperty('--tex-full',  `url('${data.variants.full || empty}')`);
+        live.style.setProperty('--progress-pct', '50%');
+        // Derive aspect-ratio from the actual image so we don't squish it.
+        const probe = new Image();
+        probe.onload = () => { live.style.aspectRatio = `${probe.naturalWidth} / ${probe.naturalHeight}`; };
+        probe.src = empty;
+
+        const wrap = document.createElement('label');
+        wrap.className = 'control';
+        wrap.innerHTML = `
+          value
+          <input type="range" id="progress-value" min="0" max="100" value="50" />
+          <span id="progress-value-label" class="range-value">50%</span>`;
+        controls.appendChild(wrap);
+        const range = wrap.querySelector('#progress-value');
+        const label = wrap.querySelector('#progress-value-label');
+        range.addEventListener('input', (e) => {
+          const v = e.target.value;
+          live.style.setProperty('--progress-pct', v + '%');
+          label.textContent = v + '%';
+        });
+      }
+    }
 
     document.getElementById('btn-download').addEventListener('click', () => {
       const data = state.result; if (!data) return;

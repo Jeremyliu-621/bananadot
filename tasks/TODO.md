@@ -54,7 +54,9 @@ KEEP IT SHORT
 - [x] `pipeline/bundle.py` — zip the output folder
 - [x] Wire `/generate` endpoint: accept image + component type → run pipeline → return zip
 - [x] Offline chain verified with synthetic inputs (cleanup → godot → bundle)
-- [~] Smoke test with a real pixel-art button and one flat-vector button. Inspect outputs by eye, drop zip in a Godot project, verify hover/press.
+- [x] Extend `pipeline/godot.py` beyond button: per-component `_SPECS` registry → `NinePatchRect` (panel), `TextureButton` w/ `toggle_mode` (checkbox), `TextureProgressBar` (progress bar). README + `.tscn` templates per type. Offline smoke-tested all four emissions (example.tscn + zip) 2026-04-16.
+- [x] Frontend — enable panel / checkbox / progress_bar radios, dynamic variants grid from response's state keys, component-specific live-preview widgets (CSS `border-image` 9-slice panel, toggleable checkbox, range-driven progress fill), install-step copy swaps node type + asset paths per component.
+- [~] Smoke test with a real pixel-art button and one flat-vector button. Inspect outputs by eye, drop zip in a Godot project, verify hover/press. Now also need to eyeball a panel, a checkbox, and a progress bar going through Nano Banana end-to-end.
 
 **Phase 2 — web UI (demo surface)**
 
@@ -74,7 +76,7 @@ KEEP IT SHORT
 - Which art styles to stress-test on in step 7 of Phase 1. I'll grab one pixel-art and one clean-vector from free asset sites unless Jeremy hands me specific inputs.
 - Exact Gemini model id — starting with `gemini-3-pro-image` per the Nov announcement; if the Nano Banana 2 unified endpoint is live by the time we call, swap it.
 
-<!-- resume here: real-image smoke test. Server runs with `cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app`. Post a cropped button PNG to POST /generate with component_type=button (or open /docs). Inspect the returned zip's contents, then drop the folder into a Godot 4 project at res://bananadot_button/ and open example.tscn. If the textures look wrong: start by inspecting the raw Nano Banana outputs BEFORE cleanup (log them out of generate.py) to separate model quality issues from pipeline bugs. -->
+<!-- resume here: real-image smoke test, now across all four component types. Boot backend (`cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app --reload`), open `/` for the web UI, and run one image through each radio: button (pixel-art + vector), panel (a frame/bg sprite), checkbox (box/square), progress bar (horizontal pill). For each: verify the live preview animates correctly in-browser, download the zip, drop into a Godot 4 project, open `example.tscn`, run F6. If a component's generations look bad, log the raw Nano Banana output BEFORE cleanup (in generate.py) to separate model drift from pipeline bugs. -->
 
 ### Review
 
