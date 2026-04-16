@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
     gemini_image_model: str = "gemini-3-pro-image"
-    output_dir: Path = Path("./outputs")
+    output_dir: Path = Path("/tmp/bananadot-outputs" if os.environ.get("VERCEL") else "./outputs")
 
 
 settings = Settings()
