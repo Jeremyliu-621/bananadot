@@ -1,0 +1,38 @@
+{
+  "task": "generate_ui_state_variant",
+  "component_type": "panel",
+
+  "reference_image": {
+    "role": "STYLE_AND_SUBJECT_REFERENCE",
+    "use_for": ["art_style", "color_palette", "edge_treatment", "proportions"],
+    "must_not_extract": ["background_or_surrounding_context"],
+    "critical_note": "The reference image IS the panel. Match its style and edge treatment exactly."
+  },
+
+  "output_constraints": {
+    "dimensions": "match_reference_exactly",
+    "background": "transparent_alpha_0",
+    "silhouette": "identical_to_reference",
+    "palette": "derived_from_reference",
+    "single_element": true,
+    "nine_slice_compatible": true
+  },
+
+  "states": {
+    "normal": {
+      "passthrough": true,
+      "description": "Use the source image directly."
+    }
+  },
+
+  "forbidden_content": [
+    "background fills behind the panel",
+    "additional UI elements",
+    "text or labels not in the source"
+  ],
+
+  "priority_rules": [
+    "DIMENSIONS MUST match the reference image exactly",
+    "Edge treatment must tile cleanly as a 9-slice background"
+  ]
+}

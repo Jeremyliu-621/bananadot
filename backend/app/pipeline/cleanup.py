@@ -8,9 +8,12 @@ Approach:
          the only size that's invariant across Nano Banana's call-to-call
          output resolution jitter.
        - no source_png → fall back to the max trimmed size across variants.
-  3. Fit each trimmed variant into the target canvas preserving aspect ratio
-     (downscale or upscale as needed, centre on transparent). Per-variant
-     resampling: nearest for pixel art, Lanczos otherwise.
+  3. Force-resize each trimmed variant to the target canvas dimensions.
+     No aspect-ratio preservation — the JSON spec says "dimensions must
+     match reference exactly", and cleanup enforces that. If Gemini returns
+     a slightly different aspect ratio, we stretch to fit rather than
+     letterboxing (which caused the "hover is smaller than normal" bug).
+     Resampling: nearest for pixel art, Lanczos otherwise.
   4. Pixel-art branch (only when source looks like pixel art):
      quantise each variant's RGB against a palette derived from the source,
      re-attach the alpha channel. Locks the colour set and hides any
@@ -68,9 +71,12 @@ def normalize_variants(
 
     resample = Image.Resampling.NEAREST if is_pixel else Image.Resampling.LANCZOS
 
-    # Fit each variant to the canonical target, preserving aspect ratio.
+    # Force-resize each variant to the target canvas — no aspect-ratio
+    # preservation. The JSON spec mandates "dimensions match reference exactly"
+    # and this is the enforcement layer. Any aspect-ratio mismatch from Gemini
+    # is corrected here (slight stretch beats visible size differences).
     fitted = {
-        state: _fit_to_canvas(img, target_w, target_h, resample=resample)
+        state: _force_resize(img, target_w, target_h, resample=resample)
         for state, img in trimmed.items()
     }
 
@@ -90,26 +96,25 @@ def _alpha_trim(img: Image.Image) -> Image.Image:
     return img.crop(bbox) if bbox else img
 
 
-def _fit_to_canvas(
+def _force_resize(
     img: Image.Image,
     target_w: int,
     target_h: int,
     resample: Image.Resampling,
 ) -> Image.Image:
-    """Scale img to fit within target_w × target_h preserving aspect ratio, centre on transparent."""
+    """Resize img to exactly target_w × target_h. No aspect-ratio preservation.
+
+    This is the enforcement side of "dimensions: match_reference_exactly" from
+    the JSON spec. If Gemini returned a slightly different aspect ratio, we
+    stretch to fit. For UI buttons where all states MUST overlay cleanly, exact
+    size match is more important than perfect aspect ratio.
+    """
     if img.size == (target_w, target_h):
         return img
     src_w, src_h = img.size
     if src_w <= 0 or src_h <= 0:
         return Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
-    scale = min(target_w / src_w, target_h / src_h)
-    new_w = max(1, round(src_w * scale))
-    new_h = max(1, round(src_h * scale))
-    resized = img.resize((new_w, new_h), resample)
-    canvas = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
-    offset = ((target_w - new_w) // 2, (target_h - new_h) // 2)
-    canvas.paste(resized, offset, resized)
-    return canvas
+    return img.resize((target_w, target_h), resample)
 
 
 def _looks_like_pixel_art(img: Image.Image) -> bool:

@@ -1,115 +1,69 @@
 """Call Nano Banana Pro to produce state variants of a UI element.
 
 Design:
-  - Every variant — including "normal" — goes through Nano Banana with the
-    user's source image as the reference. All variants come from the same
-    generation family, so stylistic drift between states is uniform rather
-    than showing a jarring seam between the raw source (if used as "normal")
-    and the generated others.
-  - One prompt template per state, no art-style branching. The source IS
-    the style anchor — Nano Banana Pro matches it from the reference image.
-  - Pixel-art-specific fixes live downstream in cleanup.py as post-processing.
+  - State definitions live in JSON spec files under `app/specs/<component>.json`,
+    following ChatForce's structured-prompt pattern. The spec drives BOTH the
+    Gemini prompt (what to generate) AND cleanup enforcement (what to enforce).
+  - States marked `"passthrough": true` reuse the source image directly — no
+    Gemini call. This avoids re-render drift on the canonical resting state.
+  - The prompt sent to Gemini is a structured JSON block (not prose). Gemini 3
+    Pro reads JSON natively and follows structured specs more reliably than
+    hand-tuned English sentences.
+  - Source image dimensions are included in the prompt so Gemini knows the
+    exact target size. Cleanup enforces this as a hard constraint.
 
 Contract:
     generate_variants(source_png: bytes, component_type: str)
         -> dict[str, bytes]    # PNG bytes per state
-
-Component type → states lookup lives in STATE_INSTRUCTIONS below. Add new
-component types there; the rest of the pipeline is state-agnostic.
 """
 
 from __future__ import annotations
 
+import io
+import json
+from pathlib import Path
+
+from PIL import Image
 from google import genai
 from google.genai import types
 
-
-# Component types where the user's uploaded image IS the canonical resting state.
-# For those, we pass the source through directly rather than asking Nano Banana to
-# re-render it — NB re-renders tend to add opaque plates / drift in silhouette /
-# shift the palette, and the user already cropped this exact state perfectly.
-# The other states still use the source as the *reference image*, so style
-# coherence across the set is preserved.
-SOURCE_IS_STATE: dict[str, str] = {
-    "button": "normal",
-    "panel": "normal",
-    # checkbox / progress_bar: ambiguous which state the user uploaded (checked
-    # vs unchecked, empty vs full), so we still call NB for all states.
-}
+SPECS_DIR = Path(__file__).parent.parent / "specs"
 
 
-STATE_INSTRUCTIONS: dict[str, dict[str, str]] = {
-    "button": {
-        "normal": (
-            "Render this exact button in the same art style, same palette, same silhouette. "
-            "Clean edges, transparent background. This is the canonical 'normal' resting state."
-        ),
-        "hover": (
-            "Same button, hover state. Slightly brighter overall, a subtle raised-highlight feel. "
-            "Silhouette and palette must stay identical to the source so it overlays cleanly."
-        ),
-        "pressed": (
-            "Same button, pressed state. Shift the top highlight to a bottom shadow, move the "
-            "inner face 1-2 pixels down to read as 'pushed in'. Outer silhouette must not change."
-        ),
-        "disabled": (
-            "Same button, disabled state. Desaturated, slightly faded, lower contrast. "
-            "Same silhouette, palette family derived from the source."
-        ),
-    },
-    "panel": {
-        "normal": (
-            "Render this exact panel in the same art style, same palette, same edge treatment. "
-            "Clean edges, transparent background. Must tile cleanly as a 9-slice background."
-        ),
-    },
-    "checkbox": {
-        "unchecked": (
-            "Render this exact checkbox in the same art style, unchecked (empty) state. "
-            "Transparent background, clean edges."
-        ),
-        "checked": (
-            "Same checkbox, checked state — same box, now with a check-mark or filled indicator "
-            "in a style matching the source art. Outer box silhouette must not change."
-        ),
-    },
-    "progress_bar": {
-        "empty": (
-            "Render this exact progress bar, empty (0%% filled). Same style, same palette, "
-            "transparent background."
-        ),
-        "full": (
-            "Same progress bar, fully filled (100%%). Same outer frame, fill style matching "
-            "the source art."
-        ),
-    },
-}
+def load_spec(component_type: str) -> dict:
+    """Load the JSON spec for a component type."""
+    path = SPECS_DIR / f"{component_type}.json"
+    if not path.is_file():
+        raise ValueError(
+            f"No spec file for component_type={component_type!r}. "
+            f"Expected: {path}"
+        )
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def generate_variants(source_png: bytes, component_type: str) -> dict[str, bytes]:
-    """Produce state variants for the given component.
+    """Produce state variants using the JSON spec for the given component.
 
-    Returns a dict mapping state name -> PNG bytes. `normal` (or the component's
-    canonical resting state) is always present. Raises if any call fails or
-    returns no image — we'd rather surface the error than ship a partial set.
+    Returns a dict mapping state name -> PNG bytes. The canonical resting state
+    is always present. Raises if any call fails or returns no image.
     """
-    # Import settings lazily so the module is testable without env vars loaded.
     from app.main import settings
 
-    try:
-        states = STATE_INSTRUCTIONS[component_type]
-    except KeyError as e:
-        raise ValueError(f"Unknown component_type: {component_type!r}") from e
+    spec = load_spec(component_type)
+
+    # Get source dimensions for the prompt.
+    with Image.open(io.BytesIO(source_png)) as src:
+        src_w, src_h = src.size
 
     client = genai.Client(api_key=settings.gemini_api_key)
-    passthrough_state = SOURCE_IS_STATE.get(component_type)
     results: dict[str, bytes] = {}
 
-    for state, prompt in states.items():
-        if state == passthrough_state:
-            # Source IS this state. Don't re-render it — see SOURCE_IS_STATE comment.
+    for state, state_spec in spec["states"].items():
+        if state_spec.get("passthrough"):
             results[state] = source_png
             continue
+
+        prompt = _build_prompt(spec, state, state_spec, src_w, src_h)
         results[state] = _call_nano_banana(
             client=client,
             model=settings.gemini_image_model,
@@ -121,6 +75,45 @@ def generate_variants(source_png: bytes, component_type: str) -> dict[str, bytes
     return results
 
 
+def _build_prompt(
+    spec: dict,
+    state: str,
+    state_spec: dict,
+    src_w: int,
+    src_h: int,
+) -> str:
+    """Build a structured JSON prompt for Gemini from the spec.
+
+    Passes the spec fields directly as JSON — Gemini 3 Pro reads structured
+    data more reliably than prose. The source dimensions are injected so the
+    model knows the exact target size.
+    """
+    prompt_payload = {
+        "task": spec["task"],
+        "state_to_generate": state,
+        "state_description": state_spec.get("description", ""),
+        "state_modifications": state_spec.get("modifications", {}),
+        "reference_image_info": {
+            "dimensions_px": f"{src_w}x{src_h}",
+            "width": src_w,
+            "height": src_h,
+            "role": spec["reference_image"]["role"],
+            "use_for": spec["reference_image"]["use_for"],
+            "critical_note": spec["reference_image"].get("critical_note", ""),
+        },
+        "output_constraints": spec["output_constraints"],
+        "forbidden_content": spec["forbidden_content"],
+        "priority_rules": spec["priority_rules"],
+    }
+
+    return (
+        "Generate the specified UI state variant based on the JSON specification "
+        "below and the reference image provided. The output image MUST be exactly "
+        f"{src_w}x{src_h} pixels with a transparent background.\n\n"
+        f"```json\n{json.dumps(prompt_payload, indent=2)}\n```"
+    )
+
+
 def _call_nano_banana(
     *,
     client: genai.Client,
@@ -129,11 +122,7 @@ def _call_nano_banana(
     reference_png: bytes,
     state: str,
 ) -> bytes:
-    """One generation call. Returns PNG bytes for this state.
-
-    We pass the source image as a reference part alongside the text prompt;
-    Nano Banana Pro uses it as the style and silhouette anchor.
-    """
+    """One generation call. Returns PNG bytes for this state."""
     response = client.models.generate_content(
         model=model,
         contents=[
@@ -143,8 +132,6 @@ def _call_nano_banana(
         config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
     )
 
-    # Walk the response for inline image data. Nano Banana can return multiple
-    # parts (text narration + image); we want the first image part.
     for candidate in response.candidates or []:
         for part in (candidate.content.parts if candidate.content else []) or []:
             inline = getattr(part, "inline_data", None)
