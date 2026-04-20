@@ -106,6 +106,27 @@ that already happened on its base, reach for `git revert <revert-sha>`
 first. Reserve rebase/restart for long-lived branches where the
 history will be consumed by humans browsing it.
 
+### uvicorn --reload on Windows is unreliable; hard-kill on mismatch (2026-04-20)
+
+When routes or imports behave unexpectedly after an edit, the running
+uvicorn is probably stale. WatchFiles occasionally misses rapid
+successive saves on Windows and leaves a worker on old bytecode.
+
+**Symptom:** `curl /openapi.json | jq '.paths'` omits a newly-added
+route; `python -c "from app.main import app; print(app.routes)"` shows
+it fine. The direct import uses the current file; the server is running
+an older one.
+
+**Fix:** hard-kill the port owner and restart:
+```
+powershell "Get-NetTCPConnection -LocalPort 8002 -State Listen | Select -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }"
+```
+Then `uvicorn app.main:app --host 127.0.0.1 --port 8002 --reload` again.
+
+**How it applies:** Trust `--reload` for style-only edits. For route
+additions or signature changes, always verify via `/openapi.json`
+before assuming the live server is current. If suspicious, hard-kill.
+
 ### Component metadata is duplicated in two places on purpose (2026-04-16)
 
 `generate.STATE_INSTRUCTIONS` (prompt per state per component) and
