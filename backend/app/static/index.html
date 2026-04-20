@@ -284,6 +284,96 @@
     .variant-banner.active { display: block; }
     .variant-banner .mono { color: var(--fg); }
 
+    /* Kit section — generate matching components in the same visual style */
+    .kit-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .kit-section .kit-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 16px;
+    }
+    .kit-section .kit-actions { display: flex; align-items: center; gap: 10px; }
+
+    .kit-progress { display: none; margin-top: 18px; flex-direction: column; gap: 10px; }
+    .kit-progress.active { display: flex; }
+    .kit-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 60px;
+      gap: 12px; align-items: center;
+      font-size: 13px;
+    }
+    .kit-row .kit-row-label { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kit-row .kit-bar {
+      height: 6px;
+      background: var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .kit-row .kit-bar-fill {
+      position: absolute; inset: 0;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.4s ease-out;
+    }
+    .kit-row .kit-state { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint); text-align: right; }
+    .kit-row.done .kit-state { color: var(--accent); }
+    .kit-row.failed .kit-bar-fill { background: var(--danger, #f87171); width: 100%; }
+    .kit-row.failed .kit-state { color: var(--danger, #f87171); }
+    /* Indeterminate pulse while a component is in progress */
+    .kit-row.active .kit-bar-fill {
+      animation: kit-pulse 2s ease-in-out infinite;
+    }
+    @keyframes kit-pulse {
+      0%   { width: 10%; }
+      50%  { width: 85%; }
+      100% { width: 10%; }
+    }
+    .kit-row.done .kit-bar-fill {
+      width: 100% !important;
+      animation: none;
+    }
+
+    /* Each completed kit member renders as a card stacked below the progress. */
+    .kit-members { margin-top: 24px; display: flex; flex-direction: column; gap: 24px; }
+    .kit-member {
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+    .kit-member .kit-member-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .kit-member .kit-member-header .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+    .kit-member .kit-member-header .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); }
+    .kit-member .kit-member-grid {
+      display: grid; gap: 1px;
+      background: var(--line); border: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+    .kit-member .kit-member-grid .variant {
+      background: var(--bg);
+      display: flex; flex-direction: column;
+    }
+    .kit-member .kit-member-grid .preview {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 10px 10px;
+      display: grid; place-items: center;
+    }
+    .kit-member .kit-member-grid .preview img { max-width: 75%; max-height: 75%; display: block; }
+    .pixel-art .kit-member .kit-member-grid .preview img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .kit-member .kit-member-grid .label {
+      padding: 6px 8px;
+      font-size: 10px; color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .kit-member .kit-member-download {
+      display: flex; justify-content: flex-end;
+    }
+
     /* Session history — thumbnails of past generations in this session */
     .session-history {
       margin-bottom: 32px;
@@ -501,6 +591,28 @@
             <button id="btn-variant" class="btn btn-accent">Generate variant</button>
             <span class="variant-hint mono">uses the source above as reference</span>
           </div>
+        </div>
+      </div>
+
+      <div class="kit-section">
+        <div class="eyebrow">matching kit</div>
+        <div class="kit-intro">
+          Generate the OTHER three component types in the same visual style. One click,
+          one coherent UI kit. Each component runs through the full pipeline &mdash;
+          state variants, live preview, downloadable zip &mdash; just in the style of
+          the component you already have.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-kit" class="btn btn-accent">Generate matching kit</button>
+          <span class="variant-hint mono">~2-3 min total</span>
+        </div>
+
+        <div id="kit-progress" class="kit-progress">
+          <!-- progress rows injected per target -->
+        </div>
+
+        <div id="kit-members" class="kit-members">
+          <!-- completed kit member cards injected here -->
         </div>
       </div>
 
@@ -938,6 +1050,191 @@
     document.getElementById('btn-retry').addEventListener('click', () => {
       show(state.file ? 'configure' : 'upload');
     });
+
+    // --- kit generation -------------------------------------------------------
+    // Streams SSE from POST /kit. One row per target component, each with a
+    // progress bar that pulses while that component is generating and fills
+    // solid when it completes.
+
+    document.getElementById('btn-kit').addEventListener('click', generateKit);
+
+    async function generateKit() {
+      if (!state.file) {
+        showError('No source image in session. Upload one first.');
+        return;
+      }
+      const sourceType = state.componentType;
+      const btn = document.getElementById('btn-kit');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      // Reset any previous kit run.
+      document.getElementById('kit-members').innerHTML = '';
+      const progressEl = document.getElementById('kit-progress');
+      progressEl.innerHTML = '';
+      progressEl.classList.remove('active');
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('source_component_type', sourceType);
+
+        const res = await fetch('/kit', { method: 'POST', body: form });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        await parseSSE(res, handleKitEvent);
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate matching kit';
+      }
+    }
+
+    // Generic SSE parser: reads the response body as a stream, splits on \n\n,
+    // dispatches each event to `onEvent(eventName, dataObj)`.
+    async function parseSSE(response, onEvent) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sepIdx;
+        while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx + 2);
+          if (!frame) continue;
+          const { eventName, data } = parseSSEFrame(frame);
+          if (data !== undefined) onEvent(eventName, data);
+        }
+      }
+    }
+
+    function parseSSEFrame(frame) {
+      let eventName = 'message';
+      const dataLines = [];
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event: ')) eventName = line.slice(7);
+        else if (line.startsWith('data: ')) dataLines.push(line.slice(6));
+      }
+      if (dataLines.length === 0) return { eventName, data: undefined };
+      try {
+        return { eventName, data: JSON.parse(dataLines.join('\n')) };
+      } catch {
+        return { eventName, data: undefined };
+      }
+    }
+
+    function handleKitEvent(name, data) {
+      switch (name) {
+        case 'kit_started':
+          kitInitProgress(data.targets);
+          break;
+        case 'component_started':
+          kitMarkActive(data.component);
+          break;
+        case 'component_completed':
+          kitMarkDone(data.component);
+          kitAppendMember(data);
+          break;
+        case 'component_failed':
+          kitMarkFailed(data.component, data.error);
+          break;
+        case 'kit_done':
+          // leave the rows visible; user can see what completed.
+          break;
+      }
+    }
+
+    function kitInitProgress(targets) {
+      const progressEl = document.getElementById('kit-progress');
+      progressEl.innerHTML = '';
+      for (const target of targets) {
+        const row = document.createElement('div');
+        row.className = 'kit-row pending';
+        row.dataset.component = target;
+        row.innerHTML = `
+          <span class="kit-row-label">${target}</span>
+          <div class="kit-bar"><div class="kit-bar-fill"></div></div>
+          <span class="kit-state">pending</span>
+        `;
+        progressEl.appendChild(row);
+      }
+      progressEl.classList.add('active');
+    }
+
+    function kitRow(component) {
+      return document.querySelector(`.kit-row[data-component="${component}"]`);
+    }
+
+    function kitMarkActive(component) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('pending');
+      row.classList.add('active');
+      row.querySelector('.kit-state').textContent = 'working...';
+    }
+
+    function kitMarkDone(component) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('active', 'pending');
+      row.classList.add('done');
+      row.querySelector('.kit-state').textContent = 'done';
+    }
+
+    function kitMarkFailed(component, error) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('active', 'pending');
+      row.classList.add('failed');
+      row.querySelector('.kit-state').textContent = 'failed';
+      row.title = error || 'generation failed';
+    }
+
+    function kitAppendMember(data) {
+      const members = document.getElementById('kit-members');
+      const card = document.createElement('div');
+      card.className = 'kit-member';
+      const sizeKb = Math.ceil(data.zip_base64.length * 0.75 / 1024);
+      const stateEntries = Object.entries(data.variants);
+      const cols = stateEntries.length;
+
+      card.innerHTML = `
+        <div class="kit-member-header">
+          <span class="label">${data.component}</span>
+          <span class="meta">${data.zip_name} · ${sizeKb} KB</span>
+        </div>
+        <div class="kit-member-grid" style="grid-template-columns: repeat(${cols}, 1fr);">
+          ${stateEntries.map(([s, url]) => `
+            <div class="variant">
+              <div class="preview"><img src="${url}" alt="${s}" /></div>
+              <div class="label">${s}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="kit-member-download">
+          <button class="btn btn-ghost btn-download-kit" data-zip-b64="${data.zip_base64}" data-zip-name="${data.zip_name}">
+            Download ${data.component} zip
+          </button>
+        </div>
+      `;
+      card.querySelector('.btn-download-kit').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const bytes = Uint8Array.from(atob(btn.dataset.zipB64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'application/zip' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = btn.dataset.zipName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      members.appendChild(card);
+    }
   </script>
 </body>
 </html>
