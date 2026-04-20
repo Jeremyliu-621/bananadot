@@ -2,76 +2,76 @@
 
 <!-- HOW TO USE: see sibling worktrees' TODO.md. One resume marker. -->
 
-## Current initiative: interaction playground
+## Current initiative: compare slider (before/after reveal)
 
-**Goal:** Add a new button on the results page: **"Open playground"**.
-Opens a hands-on surface where every component in session history is
-fully interactive — hover buttons for real hover-state swap, click
-for pressed, toggle checkboxes, drag a slider to drive progress-bar
-fill, scale components up and down with a size slider. Demo audience
-stops looking at static previews and actually *uses* the kit.
+**Goal:** A new "Compare" button on the results page opens a split
+before/after view. User picks two session-history entries via
+dropdowns, the stage shows entry A on the left half and entry B on the
+right half, separated by a draggable vertical divider. Drag the
+divider to scrub between them.
 
-**Started:** 2026-04-20 (tick 3 of /loop 2h)
-**Base branch:** `worktree-mockup-layouts` (commit `157a2d3`)
+Classic before/after reveal pattern (Google Maps old/new, design-diff
+tools). For bananadot: START button vs STOP variant, or pixel-art
+button vs its recoloured sibling, or original vs kit-generated
+checkbox in matching style.
+
+**Started:** 2026-04-20 (tick 4 of /loop 2h)
+**Base branch:** `worktree-playground` (commit `42f3ac8`)
 **Author:** `Jeremyliu-621 <jeremyliu621@gmail.com>`
 
 ### Constraints (unchanged)
 
 - Pure frontend. No backend calls.
-- NEW button + NEW step. Don't revamp existing code.
-- Fallback: empty session history renders an "upload first" prompt.
-- Testable on wake: upload any component, click "Open playground",
-  interact with it.
+- NEW button + NEW step. Don't touch existing code.
+- Works even with 1 session entry (falls back to a polite prompt
+  asking user to generate more).
+- Testable on wake.
 
-### Design — the playground screen
+### Design
 
 ```
-    [← Back to results]                    [size slider ────○──── 3×]
+   [← back]          A: [chip: button · 01 ▾]     B: [chip: button · STOP ▾]
 
-    ┌──────────────────────┐
-    │ (checkerboard bg)    │    <- the active component (big)
-    │   [component HERE]   │       hover / click / etc actually works
-    │                      │
-    └──────────────────────┘
+    ┌────────────────────────┐
+    │ left-side img | right  │
+    │               |        │
+    │      (entry A)|(entry B)│
+    │               ‖        │     ‖ = draggable divider
+    │               ‖        │
+    └────────────────────────┘
+           ‖ 50%
 
-    state: pressed                       <- live readout of current state
-
-    [component chips ·······················]    <- click chip to switch which
-                                                    session-history entry is
-                                                    displayed
+    [use source | normal | hover | pressed | disabled]    <- which variant to show
 ```
 
-- **Size slider** (1×..5×) scales the hit area so the user can test
-  how the component feels at game resolutions. CSS `transform: scale()`
-  doesn't blur on pixel art because `image-rendering: pixelated` sticks.
-- **Component chips** at the bottom list each session-history entry
-  (label + thumbnail). Clicking a chip swaps the active component.
-- **Live state readout** watches mousedown/mouseup/mouseenter/mouseleave
-  and updates "state: hover" / "pressed" / etc so the user sees what's
-  happening.
-- **Progress bar** variant: swap the big component for a slider drag —
-  a 0–100% slider whose value sets the `clip-path` inset on the fill
-  texture. Feels like a real in-game progress bar.
+- Dropdowns/chips at the top to pick entries A and B.
+- Stage is `position: relative`; two layered images (one full-width
+  each), the right-side image clipped via `clip-path: inset(0 0 0 X%)`
+  where X is the divider position.
+- Divider `<div>` positioned at X%, has a thin accent line + a
+  circular drag handle in the middle.
+- Drag handle listens to pointer events and updates X.
+- Bottom chip row: state selector (source / normal / hover / pressed /
+  disabled / checked / unchecked / etc) — controls which variant's
+  image we display for both sides.
 
 ### Plan
 
-- [x] Spawn worktree `playground` from `worktree-mockup-layouts` tip
-- [x] Boot server on :8005
-- [x] CSS for stage, chips, size slider, state readout, per-widget styling
-- [x] HTML: new `step-playground` + "Open playground" launcher on results
-- [x] JS: per-type widget builder (`_pgButton/_pgCheckbox/_pgPanel/_pgProgress`);
-  chips switch active entry; size slider scales via CSS transform.
-- [x] Live state readout tracks mouseenter/leave/down/up for buttons,
-  drags for progress, toggles for checkbox.
-- [x] "Back to results" button; preserves results view via `show()`.
-- [x] Committed under Jeremy.
-- [ ] **Blocked on user:** visual verify at :8005 — upload any component
-  (or several), click "Open playground", hover/click/toggle/drag,
-  confirm each interaction works and the state readout updates.
+- [x] Spawn worktree `compare` from playground tip
+- [x] Boot server on :8006
+- [ ] CSS for compare stage, layers, divider, state chips
+- [ ] HTML: launcher button on results + new `step-compare` section
+- [ ] JS: `openCompare()` populates A/B dropdowns from sessionHistory,
+  defaults A=most recent, B=second-most-recent. `renderCompareStage()`
+  paints current state. Pointer drag on divider updates position.
+  State chips re-render with selected state.
+- [ ] Empty-state: fewer than 2 history entries → message.
+- [ ] Commit each chunk under Jeremy.
+- [ ] Verify at :8006 — generate 2 components (or a component + a
+  variant), click Compare, drag divider, switch state chip.
 
-<!-- resume here: user smoke-test on :8005 when awake. If the playground feels good, cherry-pick 62e7d0e into kit-batch. Obvious polish knobs if he wants more: (1) keyboard shortcut on button widgets (press spacebar to toggle disabled), (2) pinch-to-zoom for touch devices, (3) multi-widget mode — show all four component types side-by-side at once. -->
+<!-- resume here: write CSS for .compare-stage with two layered images and the divider. Use CSS custom props so JS just sets --compare-left / --compare-right / --compare-split (a percentage). -->
 
 ### Review
 
-_Filled in when the playground renders, interactions work, chips
-switch, slider scales._
+_Filled in when divider drags smoothly and both entries render._
