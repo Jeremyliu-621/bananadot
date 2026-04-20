@@ -69,13 +69,23 @@ def load_spec(component_type: str) -> dict:
 def generate_variants(
     source_png: bytes,
     component_type: str,
-    style_reference_png: bytes | None = None,
+    kit_mode: bool = False,
 ) -> dict[str, bytes]:
     """Produce state variants using the JSON spec + consistency chaining.
 
-    When `style_reference_png` is provided, every Gemini call also receives
-    that image as a STYLE_FAMILY_REFERENCE (image 3) — used for kit generation
-    where the target component type differs from the reference's type.
+    Two modes:
+
+    * Normal (`kit_mode=False`, default): the uploaded image IS the element
+      we're generating states for. Source is passed to Gemini as the
+      STYLE_AND_SUBJECT reference — "make the hover/pressed/disabled states
+      of THIS thing."
+
+    * Kit mode (`kit_mode=True`): we're generating a DIFFERENT component
+      type that should match the uploaded image's visual style. Source is
+      passed as STYLE_FAMILY_REFERENCE only — "invent a new <component_type>
+      that renders in the same art style as this image, don't copy its
+      shape." This prevents the "upload a checkbox, get a button that's
+      secretly just the checkbox again" failure mode.
     """
     from app.main import settings
 
@@ -90,14 +100,25 @@ def generate_variants(
 
     for state, state_spec in spec["states"].items():
         # Every state goes through Gemini (no passthrough branch). See module docstring.
-        image_refs = _collect_image_refs(
-            source_png=source_png,
-            source_meta=_source_meta(spec, runtime_ctx),
-            anchor_png=anchor_png,
-            anchor_meta=runtime_ctx.get("consistency_anchor"),
-            style_reference_png=style_reference_png,
-            style_reference_meta=_style_family_meta() if style_reference_png else None,
-        )
+        if kit_mode:
+            # Single reference image: the source, but relabelled as style-only.
+            # No separate STYLE_AND_SUBJECT image — that was the bug: showing
+            # the source twice with contradictory roles made Gemini copy it
+            # literally instead of inventing a new silhouette.
+            image_refs: list[tuple[bytes, dict]] = [
+                (source_png, _style_family_meta_for_kit(component_type)),
+            ]
+            if anchor_png is not None and runtime_ctx.get("consistency_anchor"):
+                image_refs.append((anchor_png, runtime_ctx["consistency_anchor"]))
+        else:
+            image_refs = _collect_image_refs(
+                source_png=source_png,
+                source_meta=_source_meta(spec, runtime_ctx),
+                anchor_png=anchor_png,
+                anchor_meta=runtime_ctx.get("consistency_anchor"),
+                style_reference_png=None,
+                style_reference_meta=None,
+            )
 
         prompt = _build_prompt(
             spec=spec,
@@ -105,6 +126,8 @@ def generate_variants(
             state_spec=state_spec,
             runtime_ctx=runtime_ctx,
             image_refs=image_refs,
+            kit_mode=kit_mode,
+            component_type=component_type,
         )
 
         img_bytes = _call_nano_banana(
@@ -204,7 +227,7 @@ def _anchor_meta(state_name: str) -> dict:
 
 
 def _style_family_meta() -> dict:
-    """Metadata block for the style-family reference (kit generation)."""
+    """Generic style-family metadata (used when kit mode is not explicit)."""
     return {
         "role": "STYLE_FAMILY_REFERENCE",
         "use_for": [
@@ -226,6 +249,43 @@ def _style_family_meta() -> dict:
             "detail) but NOT its shape or subject — the current generation is "
             "for a different component entirely and must have its own correct "
             "silhouette, not this reference's."
+        ),
+    }
+
+
+def _style_family_meta_for_kit(target_component_type: str) -> dict:
+    """Kit-mode metadata — the source image is ONLY a style guide.
+
+    Emphatic `must_not_extract` and a per-component-type critical note so
+    Gemini can't drift back into 'just copy the reference'. This is the block
+    that fixes the 'upload a checkbox, get a button that IS the checkbox' bug.
+    """
+    return {
+        "role": "STYLE_FAMILY_REFERENCE",
+        "use_for": [
+            "art_style",
+            "color_palette",
+            "rendering_technique",
+            "level_of_detail",
+            "line_weight_and_edge_treatment",
+            "texture_and_material",
+        ],
+        "must_not_extract": [
+            "silhouette",
+            "subject_content",
+            "specific_shape",
+            "component_type",
+            "dimensions",
+            "aspect_ratio",
+        ],
+        "critical_note": (
+            f"This image is a DIFFERENT UI component type from what you are "
+            f"generating. You are generating a {target_component_type!r} and "
+            f"MUST invent a new {target_component_type} silhouette from "
+            f"scratch. Do NOT copy this image's shape, outline, or subject. "
+            f"Use it ONLY for art style, colour palette, line weight, edge "
+            f"treatment, and overall rendering feel. The output must clearly "
+            f"read as a {target_component_type}, not as whatever this image is."
         ),
     }
 
@@ -261,6 +321,8 @@ def _build_prompt(
     state_spec: dict,
     runtime_ctx: dict,
     image_refs: list[tuple[bytes, dict]],
+    kit_mode: bool = False,
+    component_type: str | None = None,
 ) -> str:
     """Build the structured JSON prompt + human-readable preamble.
 
@@ -273,7 +335,7 @@ def _build_prompt(
         f"image_{i + 1}": meta for i, (_, meta) in enumerate(image_refs)
     }
 
-    prompt_payload = {
+    prompt_payload: dict = {
         "task": spec["task"],
         "state_to_generate": state,
         "state_description": state_spec.get("description", ""),
@@ -285,11 +347,27 @@ def _build_prompt(
         "priority_rules": spec["priority_rules"],
     }
 
+    if kit_mode and component_type:
+        # Extra kit-specific framing in the structured payload so it's
+        # impossible to miss — belt AND suspenders for the preamble text.
+        prompt_payload["kit_mode_notice"] = {
+            "target_component_type": component_type,
+            "instruction": (
+                f"You are generating a NEW {component_type} in the visual "
+                "style of the reference image. The reference image is a "
+                "DIFFERENT component type — do NOT copy its silhouette, "
+                "shape, or subject. Invent an appropriate "
+                f"{component_type} silhouette from scratch."
+            ),
+        }
+
     preamble = _build_preamble(
         state=state,
         w=src["width"],
         h=src["height"],
         image_refs=image_refs,
+        kit_mode=kit_mode,
+        component_type=component_type,
     )
     return f"{preamble}\n\n```json\n{json.dumps(prompt_payload, indent=2)}\n```"
 
@@ -300,8 +378,42 @@ def _build_preamble(
     w: int,
     h: int,
     image_refs: list[tuple[bytes, dict]],
+    kit_mode: bool = False,
+    component_type: str | None = None,
 ) -> str:
     """Human-readable preamble describing what each attached image is for."""
+
+    # Kit mode gets its own preamble because the framing is fundamentally
+    # different: "invent a new X" rather than "generate states of THIS thing".
+    if kit_mode and component_type:
+        lines = [
+            f"Generate a NEW {component_type} for the '{state}' state.",
+            "",
+            f"The reference image is a DIFFERENT UI component type (e.g. a "
+            f"checkbox when you're generating a {component_type}). It is "
+            "provided ONLY as a style guide — copy its colour palette, line "
+            "weight, edge treatment, level of detail, and overall rendering "
+            "feel. Do NOT copy its silhouette, shape, or subject.",
+            "",
+            f"You MUST invent an appropriate {component_type} silhouette "
+            f"from scratch. The output must clearly read as a "
+            f"{component_type}, not as a copy of the reference image.",
+        ]
+        if len(image_refs) > 1:
+            for i, (_, meta) in enumerate(image_refs[1:], start=2):
+                if meta.get("role") == "CONSISTENCY_REFERENCE":
+                    lines.append("")
+                    lines.append(
+                        f"Image {i}: a previously generated "
+                        f"'{meta.get('state_name', '?')}' state of the "
+                        f"{component_type} you are building — match its "
+                        "exact dimensions, silhouette, and rendering style."
+                    )
+        lines.append("")
+        lines.append(f"The output MUST be exactly {w}x{h} pixels.")
+        return "\n".join(lines)
+
+    # Normal mode: what we had before.
     n = len(image_refs)
     if n == 1:
         return (

@@ -322,7 +322,7 @@ def _run_kit_pipeline(
     variants = gen.generate_variants(
         source_png=raw,
         component_type=target_component_type,
-        style_reference_png=raw,
+        kit_mode=True,
     )
     cleaned = cleanup.normalize_variants(variants, source_png=raw)
     out_dir = godot.emit_component(
