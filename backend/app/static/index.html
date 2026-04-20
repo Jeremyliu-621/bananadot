@@ -1279,6 +1279,201 @@
       color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
 
+    /* --- Live demo: Banana Clicker microgame ---------------------------- */
+
+    .livedemo-section { padding: 24px 0 40px; min-height: 100vh; }
+    .livedemo-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+
+    .livedemo-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-width: 960px; width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
+        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: 22px 32px 26px;
+    }
+
+    .livedemo-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px;
+    }
+    .livedemo-score {
+      padding: 10px 18px;
+      background-color: rgba(16,16,20,0.75);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--ld-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--fg);
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      font-size: 11px;
+    }
+    .livedemo-score .score-label { color: var(--muted); }
+    .livedemo-score .score-value {
+      color: var(--accent);
+      font-weight: 600;
+      margin-left: 10px;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+    }
+    .pixel-art .livedemo-score { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-pause-row {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .livedemo-pause {
+      width: 22px; height: 22px;
+      background: transparent;
+      background-image: var(--ld-check-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: 1px solid var(--line-strong);
+      cursor: pointer;
+      padding: 0;
+    }
+    .livedemo-pause[data-checked="true"] {
+      background-image: var(--ld-check-checked, none);
+      border-color: var(--accent);
+    }
+    .livedemo-pause.placeholder[data-checked="true"] { background: var(--accent); }
+    .pixel-art .livedemo-pause { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-center {
+      display: grid; place-items: center;
+      position: relative;
+    }
+    .livedemo-button {
+      width: 280px;
+      height: 110px;
+      background-color: transparent;
+      background-image: var(--ld-btn-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--fg);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      letter-spacing: 0.05em;
+      transition: transform 0.05s;
+    }
+    .livedemo-button:hover    { background-image: var(--ld-btn-hover, var(--ld-btn-normal, none)); }
+    .livedemo-button:active   { background-image: var(--ld-btn-pressed, var(--ld-btn-normal, none)); transform: translateY(1px); }
+    .livedemo-button:disabled { background-image: var(--ld-btn-disabled, var(--ld-btn-normal, none)); cursor: not-allowed; opacity: 0.6; }
+    .livedemo-button.placeholder {
+      background-color: var(--accent);
+      color: #000;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-weight: 600;
+    }
+    .pixel-art .livedemo-button { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-click-fx {
+      position: absolute;
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+      animation: ld-float-up 0.9s ease-out forwards;
+      text-shadow: 0 0 12px rgba(245,197,24,0.5);
+    }
+    @keyframes ld-float-up {
+      0%   { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-80px); }
+    }
+
+    .livedemo-health-row { display: flex; flex-direction: column; gap: 6px; }
+    .livedemo-health-label {
+      display: flex; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em;
+    }
+    .livedemo-health-bar {
+      position: relative;
+      height: 22px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--ld-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .livedemo-health-fill {
+      position: absolute; inset: 0;
+      background-image: var(--ld-progress-full, linear-gradient(90deg, #ff5c5c, #ffb85c));
+      background-size: auto 100%;
+      clip-path: inset(0 var(--ld-health, 0%) 0 0);
+      transition: clip-path 0.12s linear;
+    }
+    .pixel-art .livedemo-health-bar,
+    .pixel-art .livedemo-health-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .livedemo-overlay {
+      position: absolute; inset: 0;
+      background: rgba(5,5,9,0.85);
+      display: grid; place-items: center;
+      text-align: center;
+      padding: 40px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .livedemo-overlay.active { opacity: 1; pointer-events: auto; }
+    .livedemo-overlay h2 {
+      font-size: 32px; font-weight: 700;
+      color: var(--fg);
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+    .livedemo-overlay .final-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.15em;
+      margin-bottom: 18px;
+    }
+
+    .livedemo-empty {
+      max-width: 960px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .livedemo-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .livedemo-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -1515,6 +1710,33 @@
         </div>
       </div>
 
+      <div class="livedemo-launcher-section">
+        <div class="eyebrow">play with it</div>
+        <div class="launcher-intro">
+          Tiny playable microgame wearing your real textures. Click the
+          button to score, health drains, game over, play again. Your kit
+          stops being a gallery and starts playing a role in a game loop.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-livedemo" class="btn btn-accent">Play live demo</button>
+          <span class="variant-hint mono">Banana Clicker &middot; needs a button to play</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- live demo scene -->
+    <section id="step-livedemo" class="step livedemo-section">
+      <div class="livedemo-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-livedemo-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">banana clicker</span>
+        </div>
+      </div>
+
+      <div id="livedemo-stage-host">
+        <!-- the game stage goes here, built in JS so we can easily reset -->
+      </div>
     </section>
 
     <!-- poster scene -->
@@ -1657,7 +1879,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster', 'livedemo'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -3141,6 +3363,214 @@
         a.click();
         URL.revokeObjectURL(a.href);
       }, 'image/png');
+    }
+
+    // --- live demo: Banana Clicker ---------------------------------------
+    // Tiny playable microgame. The button is the user's generated button —
+    // click to score, health drains, game over when health hits 0. Pause
+    // checkbox uses the user's checkbox texture; score panel uses their
+    // panel texture; health bar uses their progress_bar textures. Any
+    // missing component falls back to CSS placeholder styling.
+
+    document.getElementById('btn-livedemo').addEventListener('click', openLiveDemo);
+    document.getElementById('btn-livedemo-back').addEventListener('click', _exitLiveDemo);
+
+    // Game state — re-initialised on each openLiveDemo() and resetLiveDemo().
+    const _ld = {
+      running: false,
+      paused: false,
+      score: 0,
+      health: 100,     // 0..100
+      lastTick: 0,
+      rafId: null,
+    };
+
+    function openLiveDemo() {
+      const host = document.getElementById('livedemo-stage-host');
+      host.innerHTML = '';
+
+      // Must have at least a button to play.
+      const btn = _latestHistory('button');
+      if (!btn) {
+        host.innerHTML = `<div class="livedemo-empty">
+          Banana Clicker needs a button to click. Head back, generate one,
+          and come back.
+        </div>`;
+        show('livedemo');
+        return;
+      }
+
+      const panel = _latestHistory('panel');
+      const checkbox = _latestHistory('checkbox');
+      const progress = _latestHistory('progress_bar');
+
+      const anyPixel = [btn, panel, checkbox, progress].filter(Boolean)
+        .some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      const stage = _buildLiveDemoStage(btn, panel, checkbox, progress);
+      host.appendChild(stage);
+      _startLiveDemo();
+      show('livedemo');
+    }
+
+    function _buildLiveDemoStage(btnEntry, panelEntry, checkboxEntry, progressEntry) {
+      const stage = document.createElement('div');
+      stage.className = 'livedemo-stage';
+      const btnHasPlaceholder = !btnEntry ? ' placeholder' : '';
+      const checkPlaceholder = !checkboxEntry ? ' placeholder' : '';
+      stage.innerHTML = `
+        <div class="livedemo-top">
+          <div class="livedemo-score">
+            <span class="score-label">score</span>
+            <span class="score-value" id="ld-score-value">0</span>
+          </div>
+          <label class="livedemo-pause-row">
+            <button id="ld-pause" class="livedemo-pause${checkPlaceholder}" data-checked="false" aria-label="Pause"></button>
+            <span>Pause</span>
+          </label>
+        </div>
+        <div class="livedemo-center">
+          <button id="ld-button" class="livedemo-button${btnHasPlaceholder}">
+            CLICK ME
+          </button>
+        </div>
+        <div class="livedemo-health-row">
+          <div class="livedemo-health-label">
+            <span>HP</span>
+            <span><span id="ld-health-value">100</span> / 100</span>
+          </div>
+          <div class="livedemo-health-bar"><div class="livedemo-health-fill"></div></div>
+        </div>
+        <div class="livedemo-overlay" id="ld-overlay">
+          <div>
+            <h2>Game over</h2>
+            <div class="final-score">final score: <span id="ld-final-score">0</span></div>
+            <button id="ld-play-again" class="btn btn-accent">Play again</button>
+          </div>
+        </div>
+      `;
+
+      // Texture wiring
+      if (btnEntry && btnEntry.data.variants) {
+        const v = btnEntry.data.variants;
+        if (v.normal)   stage.style.setProperty('--ld-btn-normal',   `url('${v.normal}')`);
+        if (v.hover)    stage.style.setProperty('--ld-btn-hover',    `url('${v.hover}')`);
+        if (v.pressed)  stage.style.setProperty('--ld-btn-pressed',  `url('${v.pressed}')`);
+        if (v.disabled) stage.style.setProperty('--ld-btn-disabled', `url('${v.disabled}')`);
+      }
+      if (panelEntry && panelEntry.data.variants && panelEntry.data.variants.normal) {
+        stage.style.setProperty('--ld-panel', `url('${panelEntry.data.variants.normal}')`);
+      }
+      if (checkboxEntry && checkboxEntry.data.variants) {
+        const v = checkboxEntry.data.variants;
+        if (v.unchecked) stage.style.setProperty('--ld-check-unchecked', `url('${v.unchecked}')`);
+        if (v.checked)   stage.style.setProperty('--ld-check-checked',   `url('${v.checked}')`);
+      }
+      if (progressEntry && progressEntry.data.variants) {
+        const v = progressEntry.data.variants;
+        if (v.empty) stage.style.setProperty('--ld-progress-empty', `url('${v.empty}')`);
+        if (v.full)  stage.style.setProperty('--ld-progress-full',  `url('${v.full}')`);
+      }
+
+      // Wire up event handlers after mount.
+      stage.querySelector('#ld-button').addEventListener('click', _handleClickScore);
+      stage.querySelector('#ld-pause').addEventListener('click', _togglePause);
+      stage.querySelector('#ld-play-again').addEventListener('click', _resetLiveDemo);
+
+      return stage;
+    }
+
+    function _startLiveDemo() {
+      _ld.running = true;
+      _ld.paused = false;
+      _ld.score = 0;
+      _ld.health = 100;
+      _ld.lastTick = performance.now();
+      _renderLiveDemoHUD();
+      _tickLiveDemo();
+    }
+
+    function _tickLiveDemo(now) {
+      if (!_ld.running) return;
+      now = now || performance.now();
+      const dt = Math.min(0.1, (now - _ld.lastTick) / 1000); // cap to 100ms to avoid huge drains after tab-away
+      _ld.lastTick = now;
+
+      if (!_ld.paused && _ld.health > 0) {
+        // Passive drain: ~3 HP/s — takes ~33s to lose without clicking.
+        _ld.health = Math.max(0, _ld.health - 3 * dt);
+        if (_ld.health <= 0) _gameOver();
+      }
+
+      _renderLiveDemoHUD();
+      _ld.rafId = requestAnimationFrame(_tickLiveDemo);
+    }
+
+    function _handleClickScore(e) {
+      if (!_ld.running || _ld.paused || _ld.health <= 0) return;
+      _ld.score += 1;
+      _ld.health = Math.max(0, _ld.health - 1.5); // each click costs a little
+      _spawnClickFX(e);
+      _renderLiveDemoHUD();
+      if (_ld.health <= 0) _gameOver();
+    }
+
+    function _spawnClickFX(e) {
+      const center = e.currentTarget.parentElement; // .livedemo-center
+      const rect = e.currentTarget.getBoundingClientRect();
+      const parentRect = center.getBoundingClientRect();
+      const fx = document.createElement('div');
+      fx.className = 'livedemo-click-fx';
+      fx.textContent = '+1';
+      fx.style.left = `${e.clientX - parentRect.left - 12}px`;
+      fx.style.top  = `${e.clientY - parentRect.top - 14}px`;
+      center.appendChild(fx);
+      setTimeout(() => fx.remove(), 950);
+    }
+
+    function _togglePause(e) {
+      const pauseBtn = e.currentTarget;
+      const nowPaused = pauseBtn.dataset.checked !== 'true';
+      pauseBtn.dataset.checked = String(nowPaused);
+      _ld.paused = nowPaused;
+      if (!nowPaused) _ld.lastTick = performance.now();
+    }
+
+    function _renderLiveDemoHUD() {
+      const scoreEl = document.getElementById('ld-score-value');
+      const healthEl = document.getElementById('ld-health-value');
+      if (scoreEl) scoreEl.textContent = _ld.score;
+      if (healthEl) healthEl.textContent = Math.ceil(_ld.health);
+      const stage = document.querySelector('.livedemo-stage');
+      if (stage) stage.style.setProperty('--ld-health', `${100 - _ld.health}%`);
+    }
+
+    function _gameOver() {
+      _ld.running = false;
+      if (_ld.rafId) cancelAnimationFrame(_ld.rafId);
+      const finalEl = document.getElementById('ld-final-score');
+      if (finalEl) finalEl.textContent = _ld.score;
+      const overlay = document.getElementById('ld-overlay');
+      if (overlay) overlay.classList.add('active');
+      const btn = document.getElementById('ld-button');
+      if (btn) btn.disabled = true;
+    }
+
+    function _resetLiveDemo() {
+      const overlay = document.getElementById('ld-overlay');
+      if (overlay) overlay.classList.remove('active');
+      const btn = document.getElementById('ld-button');
+      if (btn) btn.disabled = false;
+      const pauseBtn = document.getElementById('ld-pause');
+      if (pauseBtn) pauseBtn.dataset.checked = 'false';
+      _startLiveDemo();
+    }
+
+    function _exitLiveDemo() {
+      _ld.running = false;
+      if (_ld.rafId) cancelAnimationFrame(_ld.rafId);
+      show('results');
     }
   </script>
 </body>
