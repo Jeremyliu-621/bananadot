@@ -1884,45 +1884,6 @@
       </div>
 
       <!-- Launcher for the "See in a game screen" mockup scene -->
-      <div class="mockup-launcher-section">
-        <div class="eyebrow">see it in context</div>
-        <div class="mockup-launcher-intro">
-          Drop every component you have this session into a fake game menu — one
-          stage, real textures. The best way to feel whether your kit actually
-          works as UI.
-        </div>
-        <div class="kit-actions">
-          <button id="btn-mockup" class="btn btn-accent">See in a game screen</button>
-          <span class="variant-hint mono">uses whatever's in your session history</span>
-        </div>
-      </div>
-
-      <div class="playground-launcher-section">
-        <div class="eyebrow">hands on</div>
-        <div class="launcher-intro">
-          Take your components to the playground &mdash; big interactive stage,
-          size slider, every generated asset individually clickable, hoverable,
-          draggable. The fastest way to feel whether the kit <em>reads</em> as
-          real UI to the hand, not just the eye.
-        </div>
-        <div class="kit-actions">
-          <button id="btn-playground" class="btn btn-accent">Open playground</button>
-          <span class="variant-hint mono">interactive: buttons react, sliders drive fills, panels resize</span>
-        </div>
-      </div>
-
-      <div class="compare-launcher-section">
-        <div class="eyebrow">before vs after</div>
-        <div class="launcher-intro">
-          Drag a divider to scrub between any two components you've generated.
-          Classic before/after reveal &mdash; catches tiny palette shifts,
-          silhouette drifts, and style differences that the variants grid hides.
-        </div>
-        <div class="kit-actions">
-          <button id="btn-compare" class="btn btn-accent">Compare</button>
-          <span class="variant-hint mono">needs at least two entries in session</span>
-        </div>
-      </div>
 
       <div class="poster-launcher-section">
         <div class="eyebrow">ship it</div>
@@ -2880,8 +2841,10 @@
     // exist, placeholder tiles when they don't. Zero backend calls — this
     // is a pure rendering of stuff already in memory.
 
-    document.getElementById('btn-mockup').addEventListener('click', openMockup);
-    document.getElementById('btn-mockup-back').addEventListener('click', () => show('results'));
+    // launcher for 'See in a game screen' removed per user request — the
+    // step and openMockup() scaffolding remain as dead code but no UI hits
+    // them anymore.
+    document.getElementById('btn-mockup-back')?.addEventListener('click', () => show('results'));
 
     // Grab the most recent entry for a given component_type from sessionHistory,
     // or null if none. Browsing backwards = newest first.
@@ -3172,8 +3135,8 @@
     // scales the widget via CSS transform. A state-readout below the stage
     // updates live so you see "hover" / "pressed" as you interact.
 
-    document.getElementById('btn-playground').addEventListener('click', openPlayground);
-    document.getElementById('btn-playground-back').addEventListener('click', () => show('results'));
+    // launcher for 'Open playground' removed per user request.
+    document.getElementById('btn-playground-back')?.addEventListener('click', () => show('results'));
 
     const _pgSizeInput = document.getElementById('playground-size');
     const _pgSizeValue = document.getElementById('playground-size-value');
@@ -3344,8 +3307,8 @@
       split: 50,      // % — 0 = all B visible, 100 = all A visible
     };
 
-    document.getElementById('btn-compare').addEventListener('click', openCompare);
-    document.getElementById('btn-compare-back').addEventListener('click', () => show('results'));
+    // launcher for 'Compare' removed per user request.
+    document.getElementById('btn-compare-back')?.addEventListener('click', () => show('results'));
 
     function openCompare() {
       const stageHost = document.getElementById('compare-stage-host');
