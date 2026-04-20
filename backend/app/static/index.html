@@ -1079,6 +1079,150 @@
       color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
 
+    /* --- Compare slider (before/after reveal) ---------------------------- */
+
+    .compare-section { padding: 24px 0 40px; min-height: 100vh; }
+    .compare-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+
+    .compare-picker-row {
+      max-width: 900px; margin: 0 auto 16px;
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;
+    }
+    .compare-picker-row .vs {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.2em;
+      text-align: center;
+    }
+    .compare-picker {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .compare-picker label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .compare-picker select {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    .compare-picker select:focus { border-color: var(--accent); }
+
+    .compare-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-width: 900px; width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
+        repeating-conic-gradient(#0e0e12 0% 25%, #13131a 0% 50%) 50% / 24px 24px;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+      cursor: ew-resize;
+    }
+    .compare-layer {
+      position: absolute; inset: 0;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+    }
+    .compare-layer.left  { background-image: var(--compare-left, none); }
+    .compare-layer.right {
+      background-image: var(--compare-right, none);
+      clip-path: inset(0 0 0 var(--compare-split, 50%));
+    }
+    .pixel-art .compare-layer { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .compare-divider {
+      position: absolute;
+      top: 0; bottom: 0;
+      left: var(--compare-split, 50%);
+      width: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 16px rgba(245,197,24,0.35);
+      pointer-events: none;
+      transition: left 0.05s linear;
+    }
+    .compare-divider .handle {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #0a0a0a;
+      color: #0a0a0a;
+      display: grid; place-items: center;
+      font-size: 12px;
+      box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .compare-labels {
+      position: absolute;
+      top: 12px; left: 0; right: 0;
+      display: flex; justify-content: space-between;
+      padding: 0 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .compare-labels .label {
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border: 1px solid var(--line-strong);
+    }
+
+    .compare-state-row {
+      max-width: 900px; margin: 16px auto 0;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .compare-state-chip {
+      padding: 6px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+    .compare-state-chip:hover { color: var(--fg); border-color: var(--muted); }
+    .compare-state-chip.active {
+      background: rgba(245, 197, 24, 0.08);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .compare-empty {
+      max-width: 900px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .compare-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .compare-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -1289,6 +1433,49 @@
         </div>
       </div>
 
+      <div class="compare-launcher-section">
+        <div class="eyebrow">before vs after</div>
+        <div class="launcher-intro">
+          Drag a divider to scrub between any two components you've generated.
+          Classic before/after reveal &mdash; catches tiny palette shifts,
+          silhouette drifts, and style differences that the variants grid hides.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-compare" class="btn btn-accent">Compare</button>
+          <span class="variant-hint mono">needs at least two entries in session</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- compare scene -->
+    <section id="step-compare" class="step compare-section">
+      <div class="compare-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-compare-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">compare · before / after</span>
+        </div>
+      </div>
+
+      <div class="compare-picker-row" id="compare-picker-row">
+        <div class="compare-picker">
+          <label for="compare-a">Entry A</label>
+          <select id="compare-a"></select>
+        </div>
+        <div class="vs">vs</div>
+        <div class="compare-picker">
+          <label for="compare-b">Entry B</label>
+          <select id="compare-b"></select>
+        </div>
+      </div>
+
+      <div id="compare-stage-host">
+        <!-- stage or empty state injected here -->
+      </div>
+
+      <div class="compare-state-row" id="compare-state-row">
+        <!-- state chips: source / normal / hover / pressed / disabled / checked / etc -->
+      </div>
     </section>
 
     <!-- playground scene -->
@@ -1382,7 +1569,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -2496,6 +2683,166 @@
     function _setPlaygroundState(label) {
       const el = document.getElementById('playground-state');
       if (el) el.textContent = label;
+    }
+
+    // --- compare slider (before/after reveal) ------------------------------
+    // Two session-history entries, layered on a stage, with a draggable
+    // vertical divider. Dragging reveals entry B by clipping it via
+    // `clip-path: inset(0 0 0 X%)` where X follows the pointer.
+
+    const _cmp = {
+      a: null,        // selected entry A
+      b: null,        // selected entry B
+      state: 'source',// which variant key to render (source / normal / ...)
+      split: 50,      // % — 0 = all B visible, 100 = all A visible
+    };
+
+    document.getElementById('btn-compare').addEventListener('click', openCompare);
+    document.getElementById('btn-compare-back').addEventListener('click', () => show('results'));
+
+    function openCompare() {
+      const stageHost = document.getElementById('compare-stage-host');
+      stageHost.innerHTML = '';
+
+      if (sessionHistory.length < 2) {
+        stageHost.innerHTML = `
+          <div class="compare-empty">
+            Need at least two entries in session to compare.<br />
+            Head back and generate another component (or a variant) and return here.
+          </div>
+        `;
+        document.getElementById('compare-picker-row').style.display = 'none';
+        document.getElementById('compare-state-row').innerHTML = '';
+        show('compare');
+        return;
+      }
+
+      document.getElementById('compare-picker-row').style.display = '';
+
+      const anyPixel = sessionHistory.some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      // Populate A/B dropdowns, default A=most recent, B=second-most-recent.
+      const selA = document.getElementById('compare-a');
+      const selB = document.getElementById('compare-b');
+      selA.innerHTML = '';
+      selB.innerHTML = '';
+      // Build from newest to oldest.
+      const ordered = sessionHistory.slice().reverse();
+      for (const entry of ordered) {
+        const label = `${entry.label}`;
+        selA.appendChild(new Option(label, entry.id));
+        selB.appendChild(new Option(label, entry.id));
+      }
+      selA.value = ordered[0].id;
+      selB.value = ordered[1].id;
+      _cmp.a = ordered[0];
+      _cmp.b = ordered[1];
+      _cmp.split = 50;
+      _cmp.state = 'source';
+
+      selA.onchange = () => { _cmp.a = sessionHistory.find(e => e.id === selA.value); _renderCompare(); };
+      selB.onchange = () => { _cmp.b = sessionHistory.find(e => e.id === selB.value); _renderCompare(); };
+
+      _renderCompare();
+      show('compare');
+    }
+
+    function _renderCompare() {
+      const stageHost = document.getElementById('compare-stage-host');
+      stageHost.innerHTML = '';
+
+      const stage = document.createElement('div');
+      stage.className = 'compare-stage';
+      stage.innerHTML = `
+        <div class="compare-layer left"></div>
+        <div class="compare-layer right"></div>
+        <div class="compare-labels">
+          <span class="label">A · ${_cmp.a.label}</span>
+          <span class="label">B · ${_cmp.b.label}</span>
+        </div>
+        <div class="compare-divider"><span class="handle">&lsaquo;&rsaquo;</span></div>
+      `;
+
+      _setCompareImages(stage);
+      _setCompareSplit(stage, _cmp.split);
+      _wireCompareDrag(stage);
+
+      stageHost.appendChild(stage);
+      _renderCompareStateChips();
+    }
+
+    // Pick the URL for the selected state key. Falls back to source/normal if
+    // the state doesn't exist for that entry (e.g. A is a button with 'hover'
+    // but B is a checkbox with 'checked'/'unchecked' — in that case the chip
+    // state won't apply to B and we fall back).
+    function _urlForState(entry, stateKey) {
+      if (stateKey === 'source') return entry.source;
+      const v = entry.data.variants || {};
+      if (v[stateKey]) return v[stateKey];
+      // Fall back to normal for buttons, or whatever canonical state exists.
+      return v.normal || v.unchecked || v.empty || entry.source;
+    }
+
+    function _setCompareImages(stage) {
+      const urlA = _urlForState(_cmp.a, _cmp.state);
+      const urlB = _urlForState(_cmp.b, _cmp.state);
+      stage.style.setProperty('--compare-left',  `url('${urlA}')`);
+      stage.style.setProperty('--compare-right', `url('${urlB}')`);
+    }
+
+    function _setCompareSplit(stage, pct) {
+      const clamped = Math.max(0, Math.min(100, pct));
+      _cmp.split = clamped;
+      stage.style.setProperty('--compare-split', `${clamped}%`);
+    }
+
+    function _wireCompareDrag(stage) {
+      let dragging = false;
+      const getRel = (e) => {
+        const rect = stage.getBoundingClientRect();
+        const x = (e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? rect.left) - rect.left;
+        return (x / rect.width) * 100;
+      };
+      const onMove = (e) => {
+        if (!dragging) return;
+        _setCompareSplit(stage, getRel(e));
+        e.preventDefault();
+      };
+      const onUp = () => { dragging = false; document.body.style.cursor = ''; };
+      const onDown = (e) => {
+        dragging = true;
+        document.body.style.cursor = 'ew-resize';
+        _setCompareSplit(stage, getRel(e));
+        e.preventDefault();
+      };
+      stage.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      // Click anywhere on the stage jumps the divider there.
+    }
+
+    // State chips row — available states is the union of A and B variant keys.
+    function _renderCompareStateChips() {
+      const row = document.getElementById('compare-state-row');
+      row.innerHTML = '';
+      const keys = new Set(['source']);
+      for (const entry of [_cmp.a, _cmp.b]) {
+        for (const k of Object.keys(entry.data.variants || {})) keys.add(k);
+      }
+      // Canonical order.
+      const order = ['source','normal','hover','pressed','disabled','unchecked','checked','empty','full'];
+      const sorted = order.filter(k => keys.has(k)).concat([...keys].filter(k => !order.includes(k)));
+      for (const k of sorted) {
+        const chip = document.createElement('button');
+        chip.className = 'compare-state-chip' + (_cmp.state === k ? ' active' : '');
+        chip.textContent = k;
+        chip.addEventListener('click', () => {
+          _cmp.state = k;
+          _renderCompare();
+        });
+        row.appendChild(chip);
+      }
     }
   </script>
 </body>
