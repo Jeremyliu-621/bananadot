@@ -5,13 +5,9 @@ Design:
     following ChatForce's structured-prompt pattern (task, reference_image roles,
     output_constraints, forbidden_content, priority_rules).
   - The spec drives BOTH the Gemini prompt AND cleanup enforcement downstream.
-  - EVERY state goes through Gemini, including "normal". Previously "normal"
-    was a source-passthrough, but that made it the odd one out — normal kept
-    the source's original canvas/padding while the other states came back
-    tightly trimmed, so they visibly differed in size. Regenerating normal
-    through the same path as everything else keeps the whole set coherent.
-  - **Consistency chaining:** the FIRST generated state becomes the "consistency
-    anchor". All subsequent calls receive TWO reference images:
+  - States marked `"passthrough": true` reuse the source image directly.
+  - **Consistency chaining:** the FIRST generated (non-passthrough) state becomes
+    the "consistency anchor". All subsequent calls receive TWO reference images:
       image 1 = source (STYLE_AND_SUBJECT_REFERENCE — what the element looks like)
       image 2 = anchor (CONSISTENCY_REFERENCE — what Gemini's interpretation
                 actually looks like; match THIS, not a fresh interpretation)
@@ -65,6 +61,10 @@ def generate_variants(source_png: bytes, component_type: str) -> dict[str, bytes
     anchor_state: str | None = None
 
     for state, state_spec in spec["states"].items():
+        if state_spec.get("passthrough"):
+            results[state] = source_png
+            continue
+
         # Build prompt with runtime context (includes anchor info if we have one).
         prompt = _build_prompt(
             spec=spec,
