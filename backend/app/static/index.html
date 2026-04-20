@@ -873,6 +873,212 @@
       color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
 
+    /* --- Interaction playground ------------------------------------------ */
+
+    .playground-section { padding: 24px 0 40px; min-height: 100vh; }
+    .playground-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .playground-header .eyebrow { margin-bottom: 0; }
+    .playground-size-control {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .playground-size-control input[type="range"] {
+      width: 160px;
+      accent-color: var(--accent);
+    }
+    .playground-size-control .value {
+      min-width: 32px;
+      text-align: right;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .playground-stage {
+      aspect-ratio: 16 / 9;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
+        linear-gradient(180deg, #0e0e12, #050509);
+      border: 1px solid var(--line-strong);
+      display: grid; place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .playground-widget-host {
+      display: grid; place-items: center;
+      transform-origin: center center;
+      transition: transform 0.18s ease;
+    }
+
+    .playground-state-readout {
+      position: absolute;
+      bottom: 14px; left: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--faint);
+    }
+    .playground-state-readout .state {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .playground-chips {
+      max-width: 900px;
+      margin: 14px auto 0;
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .playground-chip {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--muted);
+      padding: 0;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .playground-chip:hover { border-color: var(--muted); color: var(--fg); }
+    .playground-chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .playground-chip .chip-thumb {
+      width: 36px; height: 36px;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 8px 8px;
+      display: grid; place-items: center;
+      flex: 0 0 36px;
+      overflow: hidden;
+    }
+    .playground-chip .chip-thumb img {
+      max-width: 80%; max-height: 80%; display: block;
+    }
+    .pixel-art .playground-chip .chip-thumb img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .playground-chip .chip-label {
+      padding-right: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    .pg-widget {
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .pg-widget.pg-button {
+      width: 200px;
+      height: 80px;
+      background-image: var(--pg-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      font: inherit;
+    }
+    .pg-widget.pg-button:hover    { background-image: var(--pg-hover, var(--pg-normal, none)); }
+    .pg-widget.pg-button:active   { background-image: var(--pg-pressed, var(--pg-normal, none)); }
+    .pg-widget.pg-button:disabled { background-image: var(--pg-disabled, var(--pg-normal, none)); cursor: not-allowed; opacity: 0.8; }
+    .pixel-art .pg-widget.pg-button { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-checkbox {
+      width: 96px;
+      height: 96px;
+      background-image: var(--pg-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .pg-widget.pg-checkbox[data-checked="true"] {
+      background-image: var(--pg-checked, none);
+    }
+    .pixel-art .pg-widget.pg-checkbox { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-panel {
+      width: 340px;
+      min-height: 200px;
+      resize: both;
+      overflow: hidden;
+      padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 10px;
+      background-color: rgba(16,16,20,0.6);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--pg-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 16px;
+      cursor: se-resize;
+      color: var(--fg);
+    }
+    .pg-widget.pg-panel .pg-panel-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .pixel-art .pg-widget.pg-panel { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-progress {
+      width: 320px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .pg-widget.pg-progress .pg-progress-bar {
+      position: relative;
+      height: 32px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--pg-empty, none);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .pg-widget.pg-progress .pg-progress-fill {
+      position: absolute; inset: 0;
+      background-image: var(--pg-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 calc(100% - var(--pg-progress, 50%)) 0 0);
+      transition: clip-path 0.1s linear;
+    }
+    .pg-widget.pg-progress input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .pixel-art .pg-widget.pg-progress .pg-progress-bar,
+    .pixel-art .pg-widget.pg-progress .pg-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .playground-empty {
+      max-width: 900px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .playground-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .playground-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -1069,6 +1275,48 @@
         </div>
       </div>
 
+      <div class="playground-launcher-section">
+        <div class="eyebrow">hands on</div>
+        <div class="launcher-intro">
+          Take your components to the playground &mdash; big interactive stage,
+          size slider, every generated asset individually clickable, hoverable,
+          draggable. The fastest way to feel whether the kit <em>reads</em> as
+          real UI to the hand, not just the eye.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-playground" class="btn btn-accent">Open playground</button>
+          <span class="variant-hint mono">interactive: buttons react, sliders drive fills, panels resize</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- playground scene -->
+    <section id="step-playground" class="step playground-section">
+      <div class="playground-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-playground-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">interaction playground</span>
+        </div>
+        <div class="playground-size-control">
+          <span>size</span>
+          <input id="playground-size" type="range" min="50" max="300" step="5" value="100" />
+          <span class="value" id="playground-size-value">1.00&times;</span>
+        </div>
+      </div>
+
+      <div class="playground-stage">
+        <div id="playground-widget-host" class="playground-widget-host">
+          <!-- the active widget is injected here -->
+        </div>
+        <div class="playground-state-readout">
+          state: <span class="state" id="playground-state">idle</span>
+        </div>
+      </div>
+
+      <div class="playground-chips" id="playground-chips">
+        <!-- chips per session-history entry -->
+      </div>
     </section>
 
     <!-- mockup scene -->
@@ -1134,7 +1382,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -2080,6 +2328,174 @@
       const anyPixel = [buttons[0], panelEntry, checkboxEntry, progressEntry]
         .filter(Boolean).some(e => e.data && e.data.is_pixel_art);
       document.body.classList.toggle('pixel-art', anyPixel);
+    }
+
+    // --- interaction playground --------------------------------------------
+    // "Open playground" launches a hands-on surface where the user can pick
+    // any session-history entry from chips at the bottom and interact with
+    // it full-size on a 16:9 stage. Buttons respond to hover/click, checkbox
+    // toggles, progress-bar gets a slider, panel is resizable. A size slider
+    // scales the widget via CSS transform. A state-readout below the stage
+    // updates live so you see "hover" / "pressed" as you interact.
+
+    document.getElementById('btn-playground').addEventListener('click', openPlayground);
+    document.getElementById('btn-playground-back').addEventListener('click', () => show('results'));
+
+    const _pgSizeInput = document.getElementById('playground-size');
+    const _pgSizeValue = document.getElementById('playground-size-value');
+    _pgSizeInput.addEventListener('input', _updatePlaygroundSize);
+
+    function _updatePlaygroundSize() {
+      const scale = Number(_pgSizeInput.value) / 100;
+      const host = document.getElementById('playground-widget-host');
+      host.style.transform = `scale(${scale})`;
+      _pgSizeValue.textContent = scale.toFixed(2) + '\u00d7';
+    }
+
+    function openPlayground() {
+      const chipsEl = document.getElementById('playground-chips');
+      chipsEl.innerHTML = '';
+
+      if (sessionHistory.length === 0) {
+        document.getElementById('playground-widget-host').innerHTML = '';
+        chipsEl.innerHTML = '<div class="playground-empty">Nothing in session yet. Go back and generate a component, then come hang out here.</div>';
+        _setPlaygroundState('idle');
+        show('playground');
+        return;
+      }
+
+      // Pixel-art flag from any entry.
+      const anyPixel = sessionHistory.some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      // Chip per history entry — newest first.
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        const entry = sessionHistory[i];
+        const chip = document.createElement('button');
+        chip.className = 'playground-chip';
+        chip.dataset.historyId = entry.id;
+        chip.innerHTML = `
+          <div class="chip-thumb"><img src="${entry.source}" alt="${entry.label}" /></div>
+          <span class="chip-label">${entry.label}</span>
+        `;
+        chip.addEventListener('click', () => _renderPlaygroundEntry(entry));
+        chipsEl.appendChild(chip);
+      }
+
+      // Default: most recent entry.
+      _renderPlaygroundEntry(sessionHistory[sessionHistory.length - 1]);
+
+      // Reset size slider to 1x each time we enter.
+      _pgSizeInput.value = 100;
+      _updatePlaygroundSize();
+
+      show('playground');
+    }
+
+    function _renderPlaygroundEntry(entry) {
+      // Mark active chip.
+      document.querySelectorAll('.playground-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.historyId === entry.id);
+      });
+
+      const host = document.getElementById('playground-widget-host');
+      host.innerHTML = '';
+
+      const widget = _buildPlaygroundWidget(entry);
+      if (widget) host.appendChild(widget);
+      _wirePlaygroundStateReadout(widget, entry.type);
+      _setPlaygroundState('idle');
+    }
+
+    function _buildPlaygroundWidget(entry) {
+      const v = entry.data.variants || {};
+      switch (entry.type) {
+        case 'button': return _pgButton(v);
+        case 'checkbox': return _pgCheckbox(v);
+        case 'panel': return _pgPanel(v);
+        case 'progress_bar': return _pgProgress(v);
+        default: return null;
+      }
+    }
+
+    function _pgButton(v) {
+      const el = document.createElement('button');
+      el.className = 'pg-widget pg-button';
+      if (v.normal)   el.style.setProperty('--pg-normal',   `url('${v.normal}')`);
+      if (v.hover)    el.style.setProperty('--pg-hover',    `url('${v.hover}')`);
+      if (v.pressed)  el.style.setProperty('--pg-pressed',  `url('${v.pressed}')`);
+      if (v.disabled) el.style.setProperty('--pg-disabled', `url('${v.disabled}')`);
+      return el;
+    }
+
+    function _pgCheckbox(v) {
+      const el = document.createElement('button');
+      el.className = 'pg-widget pg-checkbox';
+      el.dataset.checked = 'false';
+      if (v.unchecked) el.style.setProperty('--pg-unchecked', `url('${v.unchecked}')`);
+      if (v.checked)   el.style.setProperty('--pg-checked',   `url('${v.checked}')`);
+      el.addEventListener('click', () => {
+        const next = el.dataset.checked === 'true' ? 'false' : 'true';
+        el.dataset.checked = next;
+        _setPlaygroundState(next === 'true' ? 'checked' : 'unchecked');
+      });
+      return el;
+    }
+
+    function _pgPanel(v) {
+      const el = document.createElement('div');
+      el.className = 'pg-widget pg-panel';
+      el.innerHTML = `
+        <div class="pg-panel-hint">drag bottom-right corner to resize</div>
+        <div style="margin-top: auto; color: var(--muted); font-size: 12px;">
+          9-slice frames stay crisp at any size. Give it a tug.
+        </div>
+      `;
+      if (v.normal) el.style.setProperty('--pg-panel', `url('${v.normal}')`);
+      return el;
+    }
+
+    function _pgProgress(v) {
+      const el = document.createElement('div');
+      el.className = 'pg-widget pg-progress';
+      el.innerHTML = `
+        <div class="pg-progress-bar"><div class="pg-progress-fill"></div></div>
+        <input type="range" min="0" max="100" value="50" />
+      `;
+      if (v.empty) el.style.setProperty('--pg-empty', `url('${v.empty}')`);
+      if (v.full)  el.style.setProperty('--pg-full',  `url('${v.full}')`);
+
+      const range = el.querySelector('input');
+      const setPct = (pct) => {
+        el.style.setProperty('--pg-progress', `${pct}%`);
+        _setPlaygroundState(`fill ${pct}%`);
+      };
+      setPct(50);
+      range.addEventListener('input', (e) => setPct(e.target.value));
+      return el;
+    }
+
+    function _wirePlaygroundStateReadout(widget, type) {
+      if (!widget) return;
+
+      if (type === 'button') {
+        widget.addEventListener('mouseenter', () => _setPlaygroundState('hover'));
+        widget.addEventListener('mouseleave', () => _setPlaygroundState('idle'));
+        widget.addEventListener('mousedown',  () => _setPlaygroundState('pressed'));
+        widget.addEventListener('mouseup',    () => _setPlaygroundState('hover'));
+        return;
+      }
+      if (type === 'panel') {
+        widget.addEventListener('mouseenter', () => _setPlaygroundState('hover'));
+        widget.addEventListener('mouseleave', () => _setPlaygroundState('idle'));
+        return;
+      }
+      // checkbox + progress_bar set their own state on interaction.
+    }
+
+    function _setPlaygroundState(label) {
+      const el = document.getElementById('playground-state');
+      if (el) el.textContent = label;
     }
   </script>
 </body>
