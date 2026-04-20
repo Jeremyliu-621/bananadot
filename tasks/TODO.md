@@ -3,82 +3,165 @@
 <!--
 HOW TO USE THIS FILE
 ====================
-Active plan for the current initiative. One TODO.md at a time — don't spawn
-parallel plans. When an initiative wraps, move this file to
-tasks/archive/YYYY-MM-DD-<name>.md and start a fresh TODO.md for the next one.
+Active plan for the current initiative. One TODO.md at a time. Move to
+tasks/archive/YYYY-MM-DD-<name>.md when the initiative wraps up.
 
 STATUS MARKERS
 - [ ]  todo
-- [~]  in progress (only one at a time)
+- [~]  in progress (one at a time)
 - [x]  done
-- [?]  blocked — next line explains why
+- [?]  blocked (next line explains why)
 
 THE `<!-- resume here -->` MARKER
-- Exactly one in the file, always.
-- It points at the very next action you'd take if the session ended right now.
-- First thing to read when resuming work in a new session — jump straight to it.
-- Move it every time you finish a step. Stale resume markers are worse than none.
-
-WHEN TO UPDATE
-- Before starting: skim the plan, confirm it still matches reality.
-- After each meaningful step: tick the box, move `<!-- resume here -->`.
-- On blocker: flip to [?], note the blocker on the next line, move resume
-  marker to whatever unblocks it.
-- On user correction: fix the plan AND consider whether MEMORY.md needs
-  an entry for the lesson.
-
-WHEN TO START A NEW PLAN
-- Current initiative is done (archive this file first).
-- Scope pivots enough that the existing checklist is stale.
-- Never "just rewrite" an active plan silently — either archive or explicitly
-  supersede with a note.
-
-KEEP IT SHORT
-- If a step has 3+ sub-steps, break it out as its own plan or sub-list.
-- Delete finished sections you don't need to reference anymore; git has history.
+- Exactly one in the file. First thing to read when a new session starts.
+- Move it every time a step finishes.
 -->
 
-## Current initiative: v0 end-to-end pipeline
+## Current initiative: kit generation + multi-variant batch + real progress
 
-**Goal:** Drop a cropped UI-element image in, get back a Godot component zip that works. Prove the loop, then wrap in a web UI.
-**Started:** 2026-04-16
+**Goal:** Two big features layered on top of the demo-both surface
+(variant + session history + Godot-free UI):
 
-### Plan
+1. **Kit generation** — one source component → matching set of all four
+   component types (button + panel + checkbox + progress_bar) sharing the
+   source's visual style.
+2. **Multi-variant batch** — when a user types a text modification, return
+   3 options in parallel and let them pick the best one to continue with.
 
-**Phase 1 — backend pipeline (callable by HTTP, no UI yet)**
+Both features need **real progress bars** driven by server-sent events
+(SSE), not fake timed messages.
 
-- [x] Scaffold Python backend: `pyproject.toml`, FastAPI skeleton, env config, stubbed pipeline modules
-- [x] `pipeline/generate.py` — call Nano Banana with reference image + state instruction; return PNG bytes per requested state
-- [x] `pipeline/cleanup.py` — alpha-bbox trim, size-align all variants, detect-if-pixel-art + palette snap + nearest-neighbour downsample when true
-- [x] `pipeline/godot.py` — emit `example.tscn`, `README.md` from a template, drop PNGs alongside. (Swapped plan: TextureButton instead of Theme+StyleBoxTexture for v1 — drops in with zero import ceremony. Theme can return when we add 9-slice panels.)
-- [x] `pipeline/bundle.py` — zip the output folder
-- [x] Wire `/generate` endpoint: accept image + component type → run pipeline → return zip
-- [x] Offline chain verified with synthetic inputs (cleanup → godot → bundle)
-- [x] Extend `pipeline/godot.py` beyond button: per-component `_SPECS` registry → `NinePatchRect` (panel), `TextureButton` w/ `toggle_mode` (checkbox), `TextureProgressBar` (progress bar). README + `.tscn` templates per type. Offline smoke-tested all four emissions (example.tscn + zip) 2026-04-16.
-- [x] Frontend — enable panel / checkbox / progress_bar radios, dynamic variants grid from response's state keys, component-specific live-preview widgets (CSS `border-image` 9-slice panel, toggleable checkbox, range-driven progress fill), install-step copy swaps node type + asset paths per component.
-- [~] Smoke test with a real pixel-art button and one flat-vector button. Inspect outputs by eye, drop zip in a Godot project, verify hover/press. Now also need to eyeball a panel, a checkbox, and a progress bar going through Nano Banana end-to-end.
+**Started:** 2026-04-20
+**Base branch:** `worktree-demo-both` (commit `f4325c7`)
+**Author for commits:** `Jeremyliu-621 <jeremyliu621@gmail.com>` (via
+`--author` flag; do not modify `git config`).
 
-**Phase 2 — web UI (demo surface)**
+### Architecture notes
 
-- [ ] Next.js + shadcn + Tailwind skeleton in `frontend/`
-- [ ] Upload page: drag-drop, component-type dropdown, generate button
-- [ ] Call backend, show loading, render preview grid (original | normal | hover | pressed | disabled)
-- [ ] Download-zip button
+#### Kit generation
 
-**Phase 3 — polish for the demo**
+- New optional param on `generate.generate_variants`:
+  `style_reference_png: bytes | None`. When set, every Gemini call receives
+  a third image part with role `STYLE_FAMILY_REFERENCE` + a prompt block
+  explaining it ("match the art style of image 3 but not its shape or
+  subject").
+- New endpoint `POST /kit` — takes the source image and its
+  `source_component_type`. For each of the OTHER three component types
+  it runs the full pipeline (generate_variants with style_reference →
+  cleanup → emit). Returns a JSON bundle with all four components' state
+  sets + zip bundles.
+- Emits SSE events during the run:
+  `{"type": "component_started", "component": "checkbox"}` and
+  `{"type": "component_completed", "component": "checkbox",
+    "variants": {...}}` for each target.
 
-- [ ] Live CSS mock of the Godot component so they see it "work" in-browser before download
-- [ ] Error + loading states
-- [ ] Style pass (ChatForce look, or neutral-clean if no brand guide handed over)
+#### Multi-variant batch
 
-### Open items (not blocking)
+- Extend `generate.apply_modification` to accept `count: int = 1`. When
+  count > 1, run `count` parallel Gemini calls with light prompt-seed
+  variation to encourage different outputs.
+- New endpoint `POST /variant/options` — source + modification + count,
+  returns N candidate images (NO state pipeline yet — just the modified
+  source). Frontend shows them side by side.
+- User picks one → frontend POSTs it as the source to the existing
+  `/preview` flow (the picked option becomes the new baseline).
 
-- Which art styles to stress-test on in step 7 of Phase 1. I'll grab one pixel-art and one clean-vector from free asset sites unless Jeremy hands me specific inputs.
-- Exact Gemini model id — starting with `gemini-3-pro-image` per the Nov announcement; if the Nano Banana 2 unified endpoint is live by the time we call, swap it.
+#### Progress bars (SSE)
 
-<!-- resume here: real-image smoke test, now across all four component types. Boot backend (`cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app --reload`), open `/` for the web UI, and run one image through each radio: button (pixel-art + vector), panel (a frame/bg sprite), checkbox (box/square), progress bar (horizontal pill). For each: verify the live preview animates correctly in-browser, download the zip, drop into a Godot 4 project, open `example.tscn`, run F6. If a component's generations look bad, log the raw Nano Banana output BEFORE cleanup (in generate.py) to separate model drift from pipeline bugs. -->
+- FastAPI `StreamingResponse` with `text/event-stream` media type, yielding
+  `data: {json}\n\n` framed events.
+- Frontend `EventSource` consumes the stream; a small progress-bar
+  component fills per event. One bar per component (kit) or per option
+  (batch).
+- Events are fire-and-forget; the final event carries the completed
+  payload the UI needs to render.
+
+### Phase 1 — scaffolding (non-code prep)
+
+- [x] Create worktree `kit-batch` from `worktree-demo-both` tip
+- [x] Archive old TODO; write this one
+- [ ] Boot the existing demo-both server pattern on port 8002 for this
+  branch; verify baseline (pre-feature) works
+
+### Phase 2 — kit generation backend
+
+- [ ] Add `style_reference_png` param to `generate.generate_variants`.
+  When present: include a third `types.Part.from_bytes` in each Gemini
+  call, add a `STYLE_FAMILY_REFERENCE` block to the prompt's JSON payload
+  with explicit `use_for`/`must_not_extract` lists that separate "style"
+  from "shape/subject".
+- [ ] Offline-test: pass a button source as `style_reference_png` when
+  generating a checkbox; confirm no regression on the normal button
+  flow (style_reference=None).
+- [ ] New `/kit` endpoint in `main.py`. Accepts `image` + `source_component_type`.
+  Computes the three target types, runs the pipeline for each with the
+  source as style reference, returns a JSON bundle (all components, all
+  states, all zip bundles).
+- [ ] Stream SSE events during the run — one component at a time, sequential
+  (parallel wastes Gemini quota if any fail). Emit
+  `component_started` → do the work → emit `component_completed` with
+  the variants payload for just that component. Final event is
+  `kit_done`.
+- [ ] Hit the endpoint manually via curl with a real image; confirm the
+  event stream works end-to-end.
+
+### Phase 3 — kit generation frontend
+
+- [ ] New "Generate matching kit" button on the results step (only visible
+  after a component has been generated).
+- [ ] Progress UI: a tall card with four progress rows (one per component
+  type), each with a label + bar. Current component fills 0 → 100%,
+  others stay pending; completed ones show a green check.
+- [ ] On receiving `component_completed`, append a result section to the
+  results page under a "Kit" tab or below the current variants grid.
+- [ ] Each generated kit member gets its own download button.
+- [ ] Final `kit_done` event: summary card with a "Download all" button
+  (optional — zip the individual zips client-side, or add a
+  `/kit/bundle` endpoint that returns a single super-zip).
+
+### Phase 4 — multi-variant batch backend
+
+- [ ] Extend `generate.apply_modification` to accept `count`. Run
+  `asyncio.gather`-style parallel calls (Gemini client supports sync;
+  use `asyncio.to_thread`).
+- [ ] Optional prompt nudge per call: append "(variation N of M, vary
+  subtly from other candidates)" to a small per-call seed so the three
+  aren't identical.
+- [ ] New `/variant/options` endpoint. Accepts image + modification +
+  count. Returns a JSON list of N data-URL images.
+- [ ] SSE variant: emit per-option progress events so each option's
+  progress bar can fill independently.
+
+### Phase 5 — multi-variant batch frontend
+
+- [ ] When user hits "Generate variant", instead of going straight to
+  the full-pipeline variant, call `/variant/options` first with
+  `count=3`.
+- [ ] Picker UI: grid of 3 thumbnails, each hoverable, with a
+  "Use this one" button below.
+- [ ] On pick: feed the chosen image into the existing `/preview` flow
+  (treat it as a new source, pushes to session history normally).
+- [ ] Progress bars during option generation (3 bars, one per option).
+
+### Phase 6 — verification + polish
+
+- [ ] Real-image smoke test: upload a button, click "Generate kit",
+  verify all four components generate with coherent style. Inspect by eye.
+- [ ] Repeat with a checkbox as the source — kit should still produce
+  the other three types in a matching style.
+- [ ] Variant batch smoke test: type a modification, see three options,
+  pick one, confirm the state pipeline runs on the picked image.
+- [ ] Error handling: if a kit component fails, the UI should show the
+  failure on that row without killing the rest.
+- [ ] Update `tasks/lessons.md` with any patterns learned (especially
+  around SSE + FastAPI, Gemini batch calling, style transfer prompt
+  shape).
+- [ ] Commit messages use `--author="Jeremyliu-621 <jeremyliu621@gmail.com>"`
+  on every commit (do NOT touch `git config`).
+
+<!-- resume here: Phase 1 final step — boot the kit-batch worktree server on port 8002 and hit /health to confirm baseline. Then start Phase 2 (style_reference_png param on generate_variants). -->
 
 ### Review
 
 _Filled in when the initiative closes: what shipped, what surprised us,
-what belongs in MEMORY.md, what to archive._
+what belongs in lessons.md or MEMORY.md._
