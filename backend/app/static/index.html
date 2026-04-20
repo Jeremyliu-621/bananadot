@@ -1223,6 +1223,62 @@
       color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
 
+    /* --- Kit poster (canvas composite of the whole session) -------------- */
+
+    .poster-section { padding: 24px 0 40px; min-height: 100vh; }
+    .poster-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+    .poster-stage {
+      max-width: 960px; width: 100%;
+      margin: 0 auto;
+      border: 1px solid var(--line-strong);
+      background: #050509;
+      display: grid; place-items: center;
+      padding: 8px;
+      min-height: 400px;
+    }
+    .poster-stage canvas {
+      display: block;
+      width: 100%; max-width: 100%;
+      height: auto;
+      background: #050509;
+    }
+    .poster-stage .poster-loading {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 80px 24px;
+    }
+    .poster-stage .poster-empty {
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .poster-actions {
+      max-width: 960px; margin: 14px auto 0;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .poster-actions .meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--faint);
+    }
+
+    .poster-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .poster-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -1446,6 +1502,38 @@
         </div>
       </div>
 
+      <div class="poster-launcher-section">
+        <div class="eyebrow">ship it</div>
+        <div class="launcher-intro">
+          Composite everything you've generated this session into a single
+          shareable PNG. Title, tile grid, palette swatches, date. The
+          artifact you post on X or drop in a deck.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-poster" class="btn btn-accent">Export kit poster</button>
+          <span class="variant-hint mono">1600&times;900 PNG, composited locally, no upload</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- poster scene -->
+    <section id="step-poster" class="step poster-section">
+      <div class="poster-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-poster-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">kit poster</span>
+        </div>
+      </div>
+
+      <div id="poster-stage-host" class="poster-stage">
+        <div class="poster-loading">Composing the poster&hellip;</div>
+      </div>
+
+      <div class="poster-actions">
+        <span id="poster-meta" class="meta">&mdash;</span>
+        <button id="btn-poster-download" class="btn btn-accent" disabled>Download PNG</button>
+      </div>
     </section>
 
     <!-- compare scene -->
@@ -1569,7 +1657,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -2843,6 +2931,216 @@
         });
         row.appendChild(chip);
       }
+    }
+
+    // --- kit poster (Canvas composite, shareable PNG) ---------------------
+    // Builds a 1600×900 PNG in the browser from sessionHistory. No DOM
+    // rasterization (which struggles with border-image / clip-path in our
+    // CSS); we draw tile images + text onto a raw <canvas> with layout math.
+
+    const POSTER_W = 1600;
+    const POSTER_H = 900;
+    const POSTER_PAD = 60;
+
+    document.getElementById('btn-poster').addEventListener('click', openPoster);
+    document.getElementById('btn-poster-back').addEventListener('click', () => show('results'));
+    document.getElementById('btn-poster-download').addEventListener('click', _downloadPoster);
+
+    async function openPoster() {
+      show('poster');
+      const host = document.getElementById('poster-stage-host');
+      const downloadBtn = document.getElementById('btn-poster-download');
+      const meta = document.getElementById('poster-meta');
+      downloadBtn.disabled = true;
+
+      if (sessionHistory.length === 0) {
+        host.innerHTML = `<div class="poster-empty">
+          Nothing in session yet. Generate a component, then come back.
+        </div>`;
+        meta.textContent = '—';
+        return;
+      }
+
+      host.innerHTML = `<div class="poster-loading">Composing the poster…</div>`;
+
+      // Load every entry's source image asynchronously before we start
+      // drawing — Canvas needs the Image elements ready.
+      const entries = sessionHistory.slice(-6).reverse(); // up to 6 most recent, newest first
+      const images = await Promise.all(entries.map(e => _loadImage(e.source)));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = POSTER_W;
+      canvas.height = POSTER_H;
+      const ctx = canvas.getContext('2d');
+      // Pixel-perfect tiles when any entry is pixel art.
+      const anyPixel = entries.some(e => e.data && e.data.is_pixel_art);
+      ctx.imageSmoothingEnabled = !anyPixel;
+
+      _drawPoster(ctx, entries, images, anyPixel);
+
+      host.innerHTML = '';
+      host.appendChild(canvas);
+
+      const sizeMb = Math.round((canvas.toDataURL('image/png').length * 0.75) / 1024 / 10.24) / 100;
+      meta.textContent = `${POSTER_W}×${POSTER_H}px · ~${sizeMb} MB · ${entries.length} component${entries.length === 1 ? '' : 's'}`;
+      downloadBtn.disabled = false;
+
+      // Stash the canvas for download.
+      window._posterCanvas = canvas;
+    }
+
+    function _loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('image load failed: ' + url.slice(0, 64)));
+        img.src = url;
+      });
+    }
+
+    function _drawPoster(ctx, entries, images, pixelArt) {
+      // Background — same dark gradient feel as the app.
+      const bg = ctx.createLinearGradient(0, 0, 0, POSTER_H);
+      bg.addColorStop(0, '#0f0f14');
+      bg.addColorStop(1, '#050509');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+      // Subtle accent radial glow near top.
+      const glow = ctx.createRadialGradient(POSTER_W / 2, 0, 0, POSTER_W / 2, 0, POSTER_W * 0.6);
+      glow.addColorStop(0, 'rgba(245, 197, 24, 0.08)');
+      glow.addColorStop(1, 'rgba(245, 197, 24, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+      // Title.
+      ctx.fillStyle = '#f5f5f7';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '700 56px Inter, system-ui, sans-serif';
+      ctx.fillText('BANANADOT KIT', POSTER_PAD, POSTER_PAD);
+
+      ctx.fillStyle = '#8b8b95';
+      ctx.font = '400 14px "JetBrains Mono", ui-monospace, monospace';
+      const date = new Date().toISOString().slice(0, 10);
+      ctx.fillText(`bananadot · ${date} · ${entries.length} component${entries.length === 1 ? '' : 's'}`,
+                   POSTER_PAD, POSTER_PAD + 68);
+
+      // Tile grid.
+      const gridTop = POSTER_PAD + 120;
+      const gridBottom = POSTER_H - POSTER_PAD - 80; // leave room for footer
+      const gridHeight = gridBottom - gridTop;
+      const gridWidth = POSTER_W - POSTER_PAD * 2;
+
+      const n = entries.length;
+      const cols = n <= 3 ? n : (n === 4 ? 4 : 3);
+      const rows = Math.ceil(n / cols);
+      const gap = 24;
+      const tileW = Math.floor((gridWidth - gap * (cols - 1)) / cols);
+      const tileH = Math.floor((gridHeight - gap * (rows - 1)) / rows);
+
+      for (let i = 0; i < n; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = POSTER_PAD + col * (tileW + gap);
+        const y = gridTop + row * (tileH + gap);
+        _drawTile(ctx, entries[i], images[i], x, y, tileW, tileH, pixelArt);
+      }
+
+      // Footer — palette swatches + tagline.
+      const footerY = POSTER_H - POSTER_PAD - 36;
+      const palette = _gatherPalette(entries);
+      const swatchSize = 28;
+      const swatchGap = 8;
+      palette.slice(0, 6).forEach((hex, i) => {
+        const sx = POSTER_PAD + i * (swatchSize + swatchGap);
+        ctx.fillStyle = hex;
+        ctx.fillRect(sx, footerY, swatchSize, swatchSize);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, footerY + 0.5, swatchSize - 1, swatchSize - 1);
+      });
+
+      ctx.fillStyle = '#5c5c66';
+      ctx.font = '400 12px "JetBrains Mono", ui-monospace, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('made with bananadot', POSTER_W - POSTER_PAD, footerY + 20);
+    }
+
+    function _drawTile(ctx, entry, img, x, y, w, h, pixelArt) {
+      // Checkerboard background for transparency readability.
+      const check = 16;
+      for (let cy = 0; cy < Math.ceil(h / check); cy++) {
+        for (let cx = 0; cx < Math.ceil(w / check); cx++) {
+          ctx.fillStyle = (cx + cy) % 2 === 0 ? '#101014' : '#16161c';
+          ctx.fillRect(x + cx * check, y + cy * check, Math.min(check, w - cx * check), Math.min(check, h - cy * check));
+        }
+      }
+
+      // Tile border.
+      ctx.strokeStyle = '#26262d';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+      // Draw image, fit-to-contain, centered. Leave room for label bar.
+      const labelH = 28;
+      const contentH = h - labelH;
+      const padding = 16;
+      const maxW = w - padding * 2;
+      const maxH = contentH - padding * 2;
+      const imgAspect = img.width / img.height;
+      let drawW = maxW;
+      let drawH = drawW / imgAspect;
+      if (drawH > maxH) { drawH = maxH; drawW = drawH * imgAspect; }
+      const ix = x + (w - drawW) / 2;
+      const iy = y + (contentH - drawH) / 2;
+
+      ctx.imageSmoothingEnabled = !pixelArt;
+      ctx.drawImage(img, ix, iy, drawW, drawH);
+
+      // Label bar at the bottom.
+      ctx.fillStyle = 'rgba(5, 5, 9, 0.92)';
+      ctx.fillRect(x, y + h - labelH, w, labelH);
+      ctx.fillStyle = '#8b8b95';
+      ctx.font = '500 11px "JetBrains Mono", ui-monospace, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(entry.label, x + 12, y + h - labelH / 2);
+    }
+
+    function _gatherPalette(entries) {
+      const seen = new Set();
+      const out = [];
+      for (const entry of entries) {
+        const sa = entry.data && entry.data.source_analysis;
+        if (sa && Array.isArray(sa.dominant_colors)) {
+          for (const hex of sa.dominant_colors) {
+            if (hex && !seen.has(hex.toLowerCase())) {
+              seen.add(hex.toLowerCase());
+              out.push(hex);
+              if (out.length >= 8) return out;
+            }
+          }
+        }
+      }
+      // Fallback accent-led palette.
+      if (out.length === 0) {
+        return ['#f5c518', '#ffd966', '#f5f5f7', '#888888', '#26262d', '#050509'];
+      }
+      return out;
+    }
+
+    function _downloadPoster() {
+      const canvas = window._posterCanvas;
+      if (!canvas) return;
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `bananadot_kit_${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
     }
   </script>
 </body>
