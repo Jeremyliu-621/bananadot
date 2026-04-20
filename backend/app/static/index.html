@@ -184,8 +184,7 @@
     .live-button:active { background-image: var(--tex-pressed); }
     .live-button:disabled { background-image: var(--tex-disabled); cursor: not-allowed; }
 
-    /* Checkbox widget — toggle on click, same sprite-swap dynamic as a
-       Godot TextureButton with toggle_mode=true. */
+    /* Checkbox widget — toggle on click, sprite-swap between two states. */
     .live-checkbox {
       width: 80px; height: 80px;
       background: transparent;
@@ -195,9 +194,8 @@
     }
     .live-checkbox[data-checked="true"] { background-image: var(--tex-checked); }
 
-    /* Panel widget — CSS border-image is the closest real 9-slice in the
-       browser. 25% slice + fill matches what most hand-drawn frames want;
-       panel.py auto-computes the equivalent patch_margin on the Godot side. */
+    /* Panel widget — CSS border-image is the browser's equivalent of a 9-slice.
+       25% slice + fill works for most hand-drawn frames. */
     .live-panel {
       width: 280px;
       min-height: 140px;
@@ -218,9 +216,8 @@
       color: var(--muted);
     }
 
-    /* Progress bar widget — the full texture is revealed left-to-right by a
-       clip-path driven off the range slider, same reveal direction as
-       TextureProgressBar with fill_mode=0. */
+    /* Progress bar widget — the full texture is revealed left-to-right via a
+       clip-path driven off the range slider. */
     .live-progress {
       position: relative;
       width: 280px;
@@ -352,47 +349,6 @@
       margin-bottom: 20px;
     }
 
-    /* Godot install steps */
-    .godot-steps {
-      margin-top: 40px;
-      padding-top: 24px;
-      border-top: 1px solid var(--line);
-    }
-    .godot-steps ol {
-      list-style: none; counter-reset: step;
-      padding: 0; margin: 14px 0 0;
-      display: flex; flex-direction: column; gap: 12px;
-    }
-    .godot-steps li {
-      counter-increment: step;
-      display: grid; grid-template-columns: 20px 1fr; gap: 12px;
-      font-size: 13px; color: var(--fg);
-    }
-    .godot-steps li::before {
-      content: counter(step);
-      color: var(--faint);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      padding-top: 2px;
-    }
-    .godot-steps li .detail {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 2px;
-    }
-    .godot-steps .prop-list {
-      list-style: none; padding: 0; margin: 6px 0 0;
-      display: flex; flex-direction: column; gap: 2px;
-      color: var(--muted); font-size: 12px;
-    }
-    .godot-steps code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--line);
-      padding: 1px 6px;
-      color: var(--fg);
-    }
   </style>
 </head>
 <body>
@@ -409,9 +365,9 @@
 
     <!-- upload -->
     <section id="step-upload" class="step active">
-      <div class="eyebrow">image &rarr; godot</div>
+      <div class="eyebrow">image &rarr; states</div>
       <h1>Drop a UI element.</h1>
-      <p class="lede">One cropped image in. Matching state variants and a drop-in Godot folder out.</p>
+      <p class="lede">One cropped image in. Matching state variants (hover, pressed, disabled) out.</p>
 
       <label id="dropzone" class="dropzone">
         <div class="primary-line">Drop an image here, or click to browse.</div>
@@ -548,36 +504,6 @@
         </div>
       </div>
 
-      <div class="godot-steps">
-        <div class="eyebrow">use in godot</div>
-        <ol>
-          <li>
-            <div>
-              Unzip the file.
-              <div class="detail">You should get a folder named <code id="step-folder-name">bananadot_button</code>.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              Move that folder into your Godot 4 project's root.
-              <div class="detail">It should sit next to your <code>project.godot</code> file. Godot will show it at <code id="step-res-path">res://bananadot_button/</code>.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              In Godot, open <code id="step-scene-path">bananadot_button/example.tscn</code>.
-              <div class="detail" id="step-run-hint">Run the scene (F6) &mdash; hover and click the button to see the states work.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              To use it in your own scenes, either instance <code>example.tscn</code> as a <code>PackedScene</code>, or add a <code id="step-node-type">TextureButton</code> node and wire its texture properties to the PNGs in <code>assets/</code>.
-              <ul class="prop-list" id="step-prop-list"></ul>
-              <div class="detail">Full notes are in the <code>README.md</code> inside the folder.</div>
-            </div>
-          </li>
-        </ol>
-      </div>
     </section>
 
     <!-- error -->
@@ -592,71 +518,36 @@
 
   <script>
     // --- component registry -------------------------------------------------
-    // Mirrors backend/app/pipeline/godot.py._SPECS. Keep them in sync when
-    // adding a new component: states list, live-widget id, Godot node type,
-    // run hint, and the texture-prop → asset-path map shown in step 4.
+    // One entry per supported component type: the state list that drives
+    // which widget preview is active, and copy for the results page.
     const COMPONENTS = {
       button: {
         states: ['normal', 'hover', 'pressed', 'disabled'],
         widgetId: 'live-button',
         resultsLede: "Here are the states. The button below is real — hover, click, toggle disabled.",
-        liveHint: "Behaves exactly like the Godot TextureButton will.",
+        liveHint: "Hover, click, and toggle disabled to see the states swap.",
         controls: 'button',
-        godot: {
-          nodeType: 'TextureButton',
-          runHint: 'hover and click the button to see the states work',
-          props: [
-            ['texture_normal',   'assets/normal.png'],
-            ['texture_pressed',  'assets/pressed.png'],
-            ['texture_hover',    'assets/hover.png'],
-            ['texture_disabled', 'assets/disabled.png'],
-          ],
-        },
       },
       panel: {
         states: ['normal'],
         widgetId: 'live-panel',
-        resultsLede: "Single panel sprite. Below, it stretches as a 9-slice — same math Godot's NinePatchRect will run.",
-        liveHint: "Renders like a Godot NinePatchRect — the frame scales, corners don't.",
+        resultsLede: "Single panel sprite. Below, it stretches as a 9-slice — frame stays crisp, center fills.",
+        liveHint: "The frame stretches and corners stay crisp.",
         controls: 'panel',
-        godot: {
-          nodeType: 'NinePatchRect',
-          runHint: "drag the node's size in the editor — the frame stretches and corners stay crisp",
-          props: [
-            ['texture', 'assets/normal.png'],
-          ],
-        },
       },
       checkbox: {
         states: ['unchecked', 'checked'],
         widgetId: 'live-checkbox',
         resultsLede: "Two states for a toggle. Click the widget below to flip between them.",
-        liveHint: "Behaves like a Godot TextureButton with toggle_mode = true.",
+        liveHint: "Click to toggle between unchecked and checked.",
         controls: 'checkbox',
-        godot: {
-          nodeType: 'TextureButton',
-          runHint: 'click the button to toggle between unchecked and checked',
-          props: [
-            ['toggle_mode',     'true'],
-            ['texture_normal',  'assets/unchecked.png'],
-            ['texture_pressed', 'assets/checked.png'],
-          ],
-        },
       },
       progress_bar: {
         states: ['empty', 'full'],
         widgetId: 'live-progress',
-        resultsLede: "Two states — empty frame and full fill. The slider below reveals the fill exactly how Godot will at runtime.",
-        liveHint: "Reveals left-to-right like a Godot TextureProgressBar.",
+        resultsLede: "Two states — empty frame and full fill. The slider below reveals the fill left-to-right.",
+        liveHint: "The slider reveals the fill left-to-right.",
         controls: 'progress_bar',
-        godot: {
-          nodeType: 'TextureProgressBar',
-          runHint: 'drag the value property in the inspector to watch the fill reveal left-to-right',
-          props: [
-            ['texture_under',    'assets/empty.png'],
-            ['texture_progress', 'assets/full.png'],
-          ],
-        },
       },
     };
 
@@ -794,7 +685,7 @@
       { at: 10, text: 'Next state…' },
       { at: 18, text: 'Still generating…' },
       { at: 26, text: 'Finishing up…' },
-      { at: 34, text: 'Packaging the Godot bundle…' },
+      { at: 34, text: 'Packaging the state set…' },
     ];
 
     async function generate() {
@@ -860,28 +751,9 @@
       widget.classList.add('active');
       wireLiveWidget(data, spec);
 
-      // Install-step copy.
-      const folder = `bananadot_${data.component_type}`;
+      // Bundle meta — zip name + size, no engine-specific copy.
       document.getElementById('bundle-meta').textContent =
         `${data.zip_name} · ${Math.ceil(data.zip_base64.length * 0.75 / 1024)} KB`;
-      document.getElementById('step-folder-name').textContent = folder;
-      document.getElementById('step-res-path').textContent = `res://${folder}/`;
-      document.getElementById('step-scene-path').textContent = `${folder}/example.tscn`;
-      document.getElementById('step-run-hint').textContent =
-        `Run the scene (F6) — ${spec.godot.runHint}.`;
-      document.getElementById('step-node-type').textContent = spec.godot.nodeType;
-
-      const propList = document.getElementById('step-prop-list');
-      propList.innerHTML = '';
-      for (const [prop, assetPath] of spec.godot.props) {
-        const li = document.createElement('li');
-        // `toggle_mode = true` is a bool, not an asset path — render as-is.
-        const isAsset = assetPath.startsWith('assets/');
-        li.innerHTML = isAsset
-          ? `<code>${prop}</code> → <code>${assetPath}</code>`
-          : `<code>${prop}</code> = <code>${assetPath}</code>`;
-        propList.appendChild(li);
-      }
     }
 
     function wireLiveWidget(data, spec) {
