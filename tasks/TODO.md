@@ -25,19 +25,22 @@ coherent UI screen.
 
 - [x] Spawn worktree `mockup` from kit-batch tip
 - [x] Copy .env, boot server on :8003
-- [ ] CSS for the mockup stage, panel frame, menu buttons, progress
-  strip, checkbox row, empty state
-- [ ] HTML: new `<section id="step-mockup">` + "See in a game screen"
+- [x] CSS for the mockup stage, panel frame, menu buttons, progress
+  strip, checkbox row, empty state (CSS custom properties driven)
+- [x] HTML: new `<section id="step-mockup">` + "See in a game screen"
   button on the results page (below the kit section)
-- [ ] JS: `openMockup()` pulls from sessionHistory, keys entries by
-  component_type (most recent wins), injects data URLs into CSS custom
-  properties. Missing types render placeholder tiles with labels.
-- [ ] "Back to results" button. Exiting preserves results view.
-- [ ] Visual verify at :8003 — upload a button, generate, click "See in
-  a game screen", confirm the scene looks like a game menu.
-- [ ] Commit each chunk under Jeremy.
+- [x] JS: `openMockup()` pulls from sessionHistory, picks most-recent
+  entries per type, three button slots can each use a different
+  history entry so variants (START/STOP/OPTIONS) show up distinctly.
+  Missing types fall back to placeholder styling.
+- [x] "Back to results" button. `show('mockup')` / `show('results')`
+  toggle cleanly via the existing state machine.
+- [ ] **Blocked on user:** visual verify at :8003 — upload a button
+  (optionally also a panel / checkbox / progress_bar), generate, click
+  "See in a game screen", confirm the scene looks coherent.
+- [x] Committed each chunk under `Jeremyliu-621`.
 
-<!-- resume here: add CSS for .mockup-stage and .mockup-panel, using CSS custom properties (--mockup-panel, --mockup-btn-normal, etc.) so JS just sets those props. -->
+<!-- resume here: visually verify on :8003 when Jeremy wakes up. If he likes it, the branch is ready to merge into kit-batch (or cherry-pick 93d2ae6). If he wants polish, obvious follow-ups: (1) a "shuffle" button on the mockup that re-picks history entries so he can flip through combinations, (2) custom labels for the menu buttons (text inputs so he can write 'START' 'OPTIONS' 'QUIT' over the baked-in text), (3) multiple mockup layouts (pause menu / HUD / shop) to show off different uses of the same kit. -->
 
 ### Review
 
