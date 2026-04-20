@@ -57,24 +57,19 @@ stops looking at static previews and actually *uses* the kit.
 
 - [x] Spawn worktree `playground` from `worktree-mockup-layouts` tip
 - [x] Boot server on :8005
-- [ ] CSS for the playground stage, chips, size slider, state readout
-- [ ] HTML: new `<section id="step-playground">` + "Open playground"
-  button on the results page (below the mockup launcher)
-- [ ] JS: `openPlayground()` renders chips per session-history entry,
-  `renderPlaygroundComponent(entry)` shows one entry big, wired with
-  interactive textures per-component-type. Per-type renderer:
-    - button: TextureButton behavior (hover/active/disabled)
-    - checkbox: click to toggle, sprite-swap
-    - progress_bar: 0..100 slider driving clip-path
-    - panel: border-image stretched to the resized box
-- [ ] Live state readout element, wired to mouse events on the active
-  widget.
-- [ ] "Back to results" button; exiting preserves results view.
-- [ ] Commit each chunk under Jeremy.
-- [ ] Verify at :8005 — upload a button, generate, click "Open
-  playground", confirm hover/click/scale all work.
+- [x] CSS for stage, chips, size slider, state readout, per-widget styling
+- [x] HTML: new `step-playground` + "Open playground" launcher on results
+- [x] JS: per-type widget builder (`_pgButton/_pgCheckbox/_pgPanel/_pgProgress`);
+  chips switch active entry; size slider scales via CSS transform.
+- [x] Live state readout tracks mouseenter/leave/down/up for buttons,
+  drags for progress, toggles for checkbox.
+- [x] "Back to results" button; preserves results view via `show()`.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8005 — upload any component
+  (or several), click "Open playground", hover/click/toggle/drag,
+  confirm each interaction works and the state readout updates.
 
-<!-- resume here: write the CSS block for .playground-stage, .playground-widget, .playground-chip. Use CSS custom props for textures like other features so JS just sets --pg-* per active entry. -->
+<!-- resume here: user smoke-test on :8005 when awake. If the playground feels good, cherry-pick 62e7d0e into kit-batch. Obvious polish knobs if he wants more: (1) keyboard shortcut on button widgets (press spacebar to toggle disabled), (2) pinch-to-zoom for touch devices, (3) multi-widget mode — show all four component types side-by-side at once. -->
 
 ### Review
 
