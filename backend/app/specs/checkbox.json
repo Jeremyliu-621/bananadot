@@ -1,0 +1,44 @@
+{
+  "task": "generate_ui_state_variant",
+  "component_type": "checkbox",
+
+  "reference_image": {
+    "role": "STYLE_AND_SUBJECT_REFERENCE",
+    "use_for": ["art_style", "color_palette", "silhouette", "proportions"],
+    "must_not_extract": ["background_or_surrounding_context"],
+    "critical_note": "The reference image IS the checkbox. Match its style exactly."
+  },
+
+  "output_constraints": {
+    "dimensions": "match_reference_exactly",
+    "silhouette": "identical_to_reference",
+    "palette": "derived_from_reference_plus_state_adjustments_only",
+    "single_element": true,
+    "preserve_source_backgrounds_and_frames": true
+  },
+
+  "states": {
+    "unchecked": {
+      "description": "Unchecked (empty) state: the box with no indicator inside.",
+      "modifications": {}
+    },
+    "checked": {
+      "description": "Checked state: same box, now with a check-mark or filled indicator in a style matching the source art.",
+      "modifications": {
+        "indicator": "add check-mark or fill inside the box"
+      }
+    }
+  },
+
+  "forbidden_content": [
+    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
+    "changes to the outer box silhouette between states",
+    "additional UI elements"
+  ],
+
+  "priority_rules": [
+    "DIMENSIONS MUST match the reference image exactly",
+    "Outer box SILHOUETTE must be identical between checked and unchecked",
+    "The check indicator must match the source art style"
+  ]
+}

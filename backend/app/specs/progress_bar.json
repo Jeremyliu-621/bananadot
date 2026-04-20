@@ -1,0 +1,44 @@
+{
+  "task": "generate_ui_state_variant",
+  "component_type": "progress_bar",
+
+  "reference_image": {
+    "role": "STYLE_AND_SUBJECT_REFERENCE",
+    "use_for": ["art_style", "color_palette", "frame_silhouette", "proportions"],
+    "must_not_extract": ["background_or_surrounding_context"],
+    "critical_note": "The reference image IS the progress bar. Match its style and frame exactly."
+  },
+
+  "output_constraints": {
+    "dimensions": "match_reference_exactly",
+    "silhouette": "identical_to_reference",
+    "palette": "derived_from_reference_plus_state_adjustments_only",
+    "single_element": true,
+    "preserve_source_backgrounds_and_frames": true
+  },
+
+  "states": {
+    "empty": {
+      "description": "Empty (0% filled) state: the outer frame with no fill inside.",
+      "modifications": {}
+    },
+    "full": {
+      "description": "Fully filled (100%) state: same outer frame, fill reaches the full width in a style matching the source art.",
+      "modifications": {
+        "fill": "100% width inside the frame"
+      }
+    }
+  },
+
+  "forbidden_content": [
+    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
+    "changes to the outer frame between states",
+    "text, numbers, or percentage labels"
+  ],
+
+  "priority_rules": [
+    "DIMENSIONS MUST match the reference image exactly",
+    "Outer frame SILHOUETTE must be identical between empty and full",
+    "Fill style must match the source art style"
+  ]
+}

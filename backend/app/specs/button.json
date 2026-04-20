@@ -1,0 +1,75 @@
+{
+  "task": "generate_ui_state_variant",
+  "component_type": "button",
+
+  "reference_image": {
+    "role": "STYLE_AND_SUBJECT_REFERENCE",
+    "use_for": [
+      "art_style",
+      "color_palette",
+      "silhouette",
+      "proportions",
+      "text_content",
+      "level_of_detail"
+    ],
+    "must_not_extract": [
+      "background_or_surrounding_context"
+    ],
+    "critical_note": "The reference image IS the button. Match its style, palette, silhouette, and dimensions exactly."
+  },
+
+  "output_constraints": {
+    "dimensions": "match_reference_exactly",
+    "silhouette": "identical_to_reference",
+    "palette": "derived_from_reference_plus_state_adjustments_only",
+    "single_element": true,
+    "preserve_text": true,
+    "preserve_source_backgrounds_and_frames": true
+  },
+
+  "states": {
+    "normal": {
+      "passthrough": true,
+      "description": "Use the source image directly as the normal state."
+    },
+    "hover": {
+      "description": "Hover state: slightly brighter overall, subtle raised-highlight feel.",
+      "modifications": {
+        "brightness": "+15%",
+        "highlight": "enhance top edge slightly"
+      }
+    },
+    "pressed": {
+      "description": "Pressed state: pushed in, top highlight flips to shadow, inner content shifts down 1-2px.",
+      "modifications": {
+        "brightness": "-15%",
+        "shadow": "add to top edge",
+        "content_offset": "down 1-2px"
+      }
+    },
+    "disabled": {
+      "description": "Disabled state: faded, desaturated, lower contrast.",
+      "modifications": {
+        "saturation": "-50%",
+        "brightness": "-10%",
+        "contrast": "-20%"
+      }
+    }
+  },
+
+  "forbidden_content": [
+    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
+    "additional UI elements not present in the source",
+    "text changes — preserve any text exactly as in the source",
+    "anti-aliasing on pixel art sources",
+    "drop shadows or glows not present in the source"
+  ],
+
+  "priority_rules": [
+    "DIMENSIONS MUST match the reference image exactly — this is the highest priority constraint",
+    "SILHOUETTE (outer edge shape) MUST be identical across all states",
+    "The reference image defines the art style — match it exactly, do not improve or clean up",
+    "State modifications describe relative changes from the reference, not absolute values",
+    "When in doubt, err toward less modification — subtle state changes are better than dramatic ones"
+  ]
+}
