@@ -184,8 +184,7 @@
     .live-button:active { background-image: var(--tex-pressed); }
     .live-button:disabled { background-image: var(--tex-disabled); cursor: not-allowed; }
 
-    /* Checkbox widget — toggle on click, same sprite-swap dynamic as a
-       Godot TextureButton with toggle_mode=true. */
+    /* Checkbox widget — toggle on click, sprite-swap between two states. */
     .live-checkbox {
       width: 80px; height: 80px;
       background: transparent;
@@ -195,9 +194,8 @@
     }
     .live-checkbox[data-checked="true"] { background-image: var(--tex-checked); }
 
-    /* Panel widget — CSS border-image is the closest real 9-slice in the
-       browser. 25% slice + fill matches what most hand-drawn frames want;
-       panel.py auto-computes the equivalent patch_margin on the Godot side. */
+    /* Panel widget — CSS border-image is the browser's equivalent of a 9-slice.
+       25% slice + fill works for most hand-drawn frames. */
     .live-panel {
       width: 280px;
       min-height: 140px;
@@ -218,9 +216,8 @@
       color: var(--muted);
     }
 
-    /* Progress bar widget — the full texture is revealed left-to-right by a
-       clip-path driven off the range slider, same reveal direction as
-       TextureProgressBar with fill_mode=0. */
+    /* Progress bar widget — the full texture is revealed left-to-right via a
+       clip-path driven off the range slider. */
     .live-progress {
       position: relative;
       width: 280px;
@@ -252,6 +249,354 @@
     }
     .bundle-meta { color: var(--faint); font-size: 11px; }
 
+    /* Variant section — "make another like this with a small change" */
+    .variant-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .variant-section .variant-form {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 14px;
+    }
+    .variant-section input[type="text"] {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .variant-section input[type="text"]:focus { border-color: var(--accent); }
+    .variant-section input[type="text"]::placeholder { color: var(--faint); }
+    .variant-section .variant-actions { display: flex; align-items: center; gap: 10px; }
+    .variant-section .variant-hint { color: var(--faint); font-size: 11px; }
+
+    .variant-banner {
+      display: none;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line-strong);
+      background: rgba(245, 197, 24, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .variant-banner.active { display: block; }
+    .variant-banner .mono { color: var(--fg); }
+
+    /* Variant option picker — three-up of candidates */
+    .variant-options { margin-top: 18px; display: none; flex-direction: column; gap: 10px; }
+    .variant-options.active { display: flex; }
+    .variant-options-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .option-slot {
+      display: flex; flex-direction: column;
+      border: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .option-slot .option-preview {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 10px 10px;
+      display: grid; place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .option-slot .option-preview img {
+      max-width: 80%; max-height: 80%;
+      opacity: 0;
+      transition: opacity 0.4s ease-in;
+      display: block;
+    }
+    .pixel-art .option-slot .option-preview img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .option-slot.done .option-preview img { opacity: 1; }
+    .option-slot .option-spinner {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(245,197,24,0.25);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+      position: absolute;
+    }
+    .option-slot.done .option-spinner,
+    .option-slot.failed .option-spinner { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .option-slot .option-btn {
+      border: none;
+      border-top: 1px solid var(--line);
+      padding: 10px;
+      font-size: 12px;
+      background: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .option-slot.done .option-btn {
+      background: var(--accent); color: #000;
+      cursor: pointer;
+    }
+    .option-slot.done .option-btn:hover { filter: brightness(1.05); }
+    .option-slot.failed .option-btn {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--danger, #f87171);
+    }
+
+    /* Kit section — generate matching components in the same visual style */
+    .kit-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .kit-section .kit-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 16px;
+    }
+    .kit-section .kit-actions { display: flex; align-items: center; gap: 10px; }
+
+    .kit-progress { display: none; margin-top: 18px; flex-direction: column; gap: 10px; }
+    .kit-progress.active { display: flex; }
+    .kit-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 60px;
+      gap: 12px; align-items: center;
+      font-size: 13px;
+    }
+    .kit-row .kit-row-label { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kit-row .kit-bar {
+      height: 6px;
+      background: var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .kit-row .kit-bar-fill {
+      position: absolute; inset: 0;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.4s ease-out;
+    }
+    .kit-row .kit-state { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint); text-align: right; }
+    .kit-row.done .kit-state { color: var(--accent); }
+    .kit-row.failed .kit-bar-fill { background: var(--danger, #f87171); width: 100%; }
+    .kit-row.failed .kit-state { color: var(--danger, #f87171); }
+    /* Indeterminate pulse while a component is in progress */
+    .kit-row.active .kit-bar-fill {
+      animation: kit-pulse 2s ease-in-out infinite;
+    }
+    @keyframes kit-pulse {
+      0%   { width: 10%; }
+      50%  { width: 85%; }
+      100% { width: 10%; }
+    }
+    .kit-row.done .kit-bar-fill {
+      width: 100% !important;
+      animation: none;
+    }
+
+    /* Each completed kit member renders as a card stacked below the progress. */
+    .kit-members { margin-top: 24px; display: flex; flex-direction: column; gap: 24px; }
+    .kit-member {
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+    .kit-member .kit-member-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .kit-member .kit-member-header .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+    .kit-member .kit-member-header .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); }
+    .kit-member .kit-member-grid {
+      display: grid; gap: 1px;
+      background: var(--line); border: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+    .kit-member .kit-member-grid .variant {
+      background: var(--bg);
+      display: flex; flex-direction: column;
+    }
+    .kit-member .kit-member-grid .preview {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 10px 10px;
+      display: grid; place-items: center;
+    }
+    .kit-member .kit-member-grid .preview img { max-width: 75%; max-height: 75%; display: block; }
+    .pixel-art .kit-member .kit-member-grid .preview img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .kit-member .kit-member-grid .label {
+      padding: 6px 8px;
+      font-size: 10px; color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .kit-member .kit-member-download {
+      display: flex; justify-content: flex-end;
+    }
+
+    /* "Try it" row inside each kit-member card — interactive widget */
+    .kit-try-row {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 14px;
+      padding: 14px 0 16px;
+      border-top: 1px dashed var(--line);
+      margin: 12px 0 12px;
+      align-items: center;
+    }
+    .kit-try-row .kit-try-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .kit-try-row .kit-try-stage {
+      background: repeating-conic-gradient(#101014 0% 25%, #16161c 0% 50%) 50% / 12px 12px;
+      border: 1px solid var(--line);
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 18px;
+      min-height: 100px;
+      flex-wrap: wrap;
+    }
+
+    .kt-btn {
+      width: 160px; height: 56px;
+      background: transparent;
+      background-image: var(--kt-btn-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none; padding: 0; cursor: pointer;
+      transition: transform 0.05s;
+    }
+    .kt-btn:hover    { background-image: var(--kt-btn-hover, var(--kt-btn-normal, none)); }
+    .kt-btn:active   { background-image: var(--kt-btn-pressed, var(--kt-btn-normal, none)); transform: translateY(1px); }
+    .kt-btn:disabled { background-image: var(--kt-btn-disabled, var(--kt-btn-normal, none)); cursor: not-allowed; opacity: 0.7; }
+    .pixel-art .kt-btn { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-check {
+      width: 56px; height: 56px;
+      background: transparent;
+      background-image: var(--kt-check-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none; padding: 0; cursor: pointer;
+    }
+    .kt-check[data-checked="true"] { background-image: var(--kt-check-checked, none); }
+    .pixel-art .kt-check { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-panel {
+      width: 260px; min-height: 80px;
+      resize: horizontal;
+      overflow: hidden;
+      padding: 14px 18px;
+      background-color: rgba(16,16,20,0.6);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--kt-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: ew-resize;
+    }
+    .pixel-art .kt-panel { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-progress { display: flex; flex-direction: column; gap: 8px; width: 240px; }
+    .kt-progress .kt-progress-bar {
+      position: relative;
+      height: 22px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--kt-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .kt-progress .kt-progress-fill {
+      position: absolute; inset: 0;
+      background-image: var(--kt-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 calc(100% - var(--kt-progress-pct, 50%)) 0 0);
+      transition: clip-path 0.1s linear;
+    }
+    .kt-progress input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .pixel-art .kt-progress .kt-progress-bar,
+    .pixel-art .kt-progress .kt-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .kt-ctrl-row {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .kt-ctrl-row input[type="checkbox"] { accent-color: var(--accent); }
+
+    /* Session history — thumbnails of past generations in this session */
+    .session-history {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .session-history-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .session-history-count { color: var(--faint); font-size: 11px; }
+    .session-history-strip {
+      display: flex; gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+    .session-history-strip::-webkit-scrollbar { height: 6px; }
+    .session-history-strip::-webkit-scrollbar-thumb { background: var(--line-strong); }
+    .history-thumb {
+      flex: 0 0 auto;
+      width: 72px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 0;
+      color: var(--muted);
+      display: flex; flex-direction: column;
+      transition: border-color .15s, color .15s;
+    }
+    .history-thumb:hover { border-color: var(--muted); color: var(--fg); }
+    .history-thumb.active {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+    .history-thumb .thumb-img {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 8px 8px;
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+    .history-thumb .thumb-img img { max-width: 85%; max-height: 85%; display: block; }
+    .pixel-art .history-thumb .thumb-img img {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+    }
+    .history-thumb .thumb-label {
+      padding: 4px 6px;
+      font-size: 10px;
+      border-top: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .history-thumb.active .thumb-label { color: var(--accent); }
+
     /* Error */
     .error-box {
       border: 1px solid var(--line-strong);
@@ -261,47 +606,1101 @@
       margin-bottom: 20px;
     }
 
-    /* Godot install steps */
-    .godot-steps {
+    /* --- mockup scene: "see in a game screen" ----------------------------
+       All textures are driven off CSS custom properties set by openMockup()
+       in JS: --mockup-panel, --mockup-btn-* (normal/hover/pressed/disabled),
+       --mockup-check-unchecked, --mockup-check-checked, --mockup-progress-empty,
+       --mockup-progress-full. Missing textures leave the prop empty; the
+       CSS falls back to plain outlined shapes so the scene is never blank. */
+
+    .mockup-section {
+      min-height: 100vh;
+      padding: 24px 0 40px;
+    }
+    .mockup-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .mockup-header .eyebrow { margin-bottom: 0; }
+
+    /* The stage — styled like a game window canvas */
+    .mockup-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
+        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: 22px 32px 28px;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Top strip — progress texture OR default thin bar */
+    .mockup-top {
+      display: flex; align-items: center; gap: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .mockup-top .mockup-progress {
+      flex: 1;
+      height: 16px;
+      position: relative;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--mockup-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .mockup-top .mockup-progress-fill {
+      position: absolute; inset: 0;
+      width: 68%;
+      background-image: var(--mockup-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: auto 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 32% 0 0);
+    }
+    .pixel-art .mockup-top .mockup-progress,
+    .pixel-art .mockup-top .mockup-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    /* Center — panel-framed menu card */
+    .mockup-center {
+      display: grid; place-items: center;
+    }
+    .mockup-panel {
+      width: 420px;
+      max-width: 85%;
+      min-height: 260px;
+      padding: 26px 32px 32px;
+      color: var(--fg);
+      display: flex; flex-direction: column; gap: 16px;
+
+      /* Use the panel texture if provided; otherwise a subtle neutral card */
+      background-color: rgba(16, 16, 20, 0.75);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--mockup-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 18px;
+    }
+    .pixel-art .mockup-panel {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+    }
+    .mockup-panel .mockup-title {
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.01em;
+      text-align: center;
+      color: var(--fg);
+    }
+    .mockup-panel .mockup-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+
+    /* Menu button row — either real textures or labeled placeholders */
+    .mockup-menu {
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: center;
+    }
+    .mockup-menu-btn {
+      width: 100%;
+      min-height: 44px;
+      padding: 0;
+      background-color: transparent;
+      background-image: var(--mockup-btn-normal, none);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font: inherit;
+      color: var(--fg);
+      font-size: 14px; font-weight: 500;
+      position: relative;
+    }
+    .mockup-menu-btn:hover { background-image: var(--mockup-btn-hover, var(--mockup-btn-normal, none)); }
+    .mockup-menu-btn:active { background-image: var(--mockup-btn-pressed, var(--mockup-btn-normal, none)); }
+    .mockup-menu-btn:disabled { background-image: var(--mockup-btn-disabled, var(--mockup-btn-normal, none)); cursor: not-allowed; opacity: 0.7; }
+    .pixel-art .mockup-menu-btn { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    /* Placeholder fallback: outlined accent rect with label when no texture */
+    .mockup-menu-btn.placeholder {
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.02);
+      color: var(--muted);
+    }
+    .mockup-menu-btn.placeholder:hover {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+    .mockup-menu-btn .label {
+      position: relative;
+      padding: 0 18px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Checkbox row (sound toggle) */
+    .mockup-checkbox-row {
+      display: flex; align-items: center; gap: 10px;
+      justify-content: center;
+      font-size: 12px; color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mockup-checkbox-row .mockup-check {
+      width: 20px; height: 20px;
+      background-color: transparent;
+      background-image: var(--mockup-check-unchecked, none);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      border: 1px solid var(--line-strong);
+      cursor: pointer;
+      padding: 0;
+    }
+    .mockup-checkbox-row .mockup-check[data-checked="true"] {
+      background-image: var(--mockup-check-checked, none);
+      border-color: var(--accent);
+    }
+    .mockup-checkbox-row .mockup-check.placeholder[data-checked="true"] {
+      background: var(--accent);
+    }
+    .pixel-art .mockup-checkbox-row .mockup-check {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    /* Bottom strip — small HUD tags: color swatches + attribution */
+    .mockup-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .mockup-palette { display: flex; gap: 4px; }
+    .mockup-palette span {
+      width: 12px; height: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Empty state: no session history yet */
+    .mockup-empty {
+      display: grid; place-items: center;
+      min-height: 260px;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    /* Tab bar — Pause / HUD / Title */
+    .mockup-tabs {
+      display: flex;
+      gap: 2px;
+      max-width: 1000px;
+      margin: 0 auto 16px;
+    }
+    .mockup-tab {
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-bottom-color: var(--line-strong);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .mockup-tab:hover { color: var(--fg); border-color: var(--muted); }
+    .mockup-tab.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(245, 197, 24, 0.05);
+    }
+
+    /* HUD layout */
+    .layout-hud { grid-template-rows: auto 1fr auto; }
+    .hud-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 18px;
+    }
+    .hud-health {
+      display: flex; flex-direction: column; gap: 4px;
+      flex: 0 0 260px;
+    }
+    .hud-health .hud-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--fg);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .hud-health .hud-bar {
+      height: 14px;
+      position: relative;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--mockup-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .hud-health .hud-bar-fill {
+      position: absolute; inset: 0;
+      background-image: var(--mockup-progress-full, linear-gradient(90deg, #ff5c5c, #ff8a8a));
+      background-size: auto 100%;
+      clip-path: inset(0 28% 0 0);
+    }
+    .pixel-art .hud-health .hud-bar,
+    .pixel-art .hud-health .hud-bar-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .mockup-panel-inline {
+      padding: 10px 14px;
+      background-color: rgba(16, 16, 20, 0.72);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--mockup-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--fg);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pixel-art .mockup-panel-inline {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .hud-score b {
+      color: var(--accent);
+      margin-left: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .hud-center {
+      display: grid; place-items: center;
+      color: rgba(245, 197, 24, 0.45);
+      font-size: 36px; font-family: monospace;
+      user-select: none;
+    }
+    .hud-bottom {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: 18px;
+    }
+    .hud-abilities { display: flex; gap: 8px; }
+    .hud-ability {
+      width: 56px; min-height: 56px;
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .hud-ability .hotkey {
+      position: absolute;
+      bottom: -14px; right: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--accent);
+      background: rgba(0,0,0,0.6);
+      padding: 1px 5px;
+      border: 1px solid var(--accent);
+    }
+    .hud-minimap {
+      min-width: 120px;
+      min-height: 80px;
+      display: grid; place-items: center;
+      text-align: center;
+    }
+    .hud-minimap .minimap-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-top: 6px;
+    }
+
+    /* Title-screen layout */
+    .layout-title { grid-template-rows: 1fr auto 1fr; }
+    .title-spacer { }
+    .title-center {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 20px;
+    }
+    .title-brand {
+      font-size: 44px; font-weight: 700; letter-spacing: 0.03em;
+      color: var(--fg);
+      text-shadow: 0 0 28px rgba(245, 197, 24, 0.3);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .title-tagline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em;
+      color: var(--muted);
+    }
+    .title-start {
+      width: 220px; min-height: 56px;
+      margin-top: 4px;
+    }
+    .title-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.15em;
+    }
+
+    /* Section for the "See in a game screen" launcher button */
+    .mockup-launcher-section {
       margin-top: 40px;
       padding-top: 24px;
       border-top: 1px solid var(--line);
     }
-    .godot-steps ol {
-      list-style: none; counter-reset: step;
-      padding: 0; margin: 14px 0 0;
-      display: flex; flex-direction: column; gap: 12px;
+    .mockup-launcher-section .mockup-launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
-    .godot-steps li {
-      counter-increment: step;
-      display: grid; grid-template-columns: 20px 1fr; gap: 12px;
-      font-size: 13px; color: var(--fg);
+
+    /* --- Interaction playground ------------------------------------------ */
+
+    .playground-section { padding: 24px 0 40px; min-height: 100vh; }
+    .playground-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
-    .godot-steps li::before {
-      content: counter(step);
+    .playground-header .eyebrow { margin-bottom: 0; }
+    .playground-size-control {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .playground-size-control input[type="range"] {
+      width: 160px;
+      accent-color: var(--accent);
+    }
+    .playground-size-control .value {
+      min-width: 32px;
+      text-align: right;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .playground-stage {
+      aspect-ratio: 16 / 9;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
+        linear-gradient(180deg, #0e0e12, #050509);
+      border: 1px solid var(--line-strong);
+      display: grid; place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .playground-widget-host {
+      display: grid; place-items: center;
+      transform-origin: center center;
+      transition: transform 0.18s ease;
+    }
+
+    .playground-state-readout {
+      position: absolute;
+      bottom: 14px; left: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.16em;
       color: var(--faint);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      padding-top: 2px;
     }
-    .godot-steps li .detail {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 2px;
+    .playground-state-readout .state {
+      color: var(--accent);
+      font-weight: 500;
     }
-    .godot-steps .prop-list {
-      list-style: none; padding: 0; margin: 6px 0 0;
-      display: flex; flex-direction: column; gap: 2px;
-      color: var(--muted); font-size: 12px;
+
+    .playground-chips {
+      max-width: 900px;
+      margin: 14px auto 0;
+      display: flex; flex-wrap: wrap; gap: 8px;
     }
-    .godot-steps code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      background: rgba(255,255,255,0.04);
+    .playground-chip {
       border: 1px solid var(--line);
-      padding: 1px 6px;
+      background: var(--bg);
+      color: var(--muted);
+      padding: 0;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .playground-chip:hover { border-color: var(--muted); color: var(--fg); }
+    .playground-chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .playground-chip .chip-thumb {
+      width: 36px; height: 36px;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 8px 8px;
+      display: grid; place-items: center;
+      flex: 0 0 36px;
+      overflow: hidden;
+    }
+    .playground-chip .chip-thumb img {
+      max-width: 80%; max-height: 80%; display: block;
+    }
+    .pixel-art .playground-chip .chip-thumb img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .playground-chip .chip-label {
+      padding-right: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    .pg-widget {
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .pg-widget.pg-button {
+      width: 200px;
+      height: 80px;
+      background-image: var(--pg-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      font: inherit;
+    }
+    .pg-widget.pg-button:hover    { background-image: var(--pg-hover, var(--pg-normal, none)); }
+    .pg-widget.pg-button:active   { background-image: var(--pg-pressed, var(--pg-normal, none)); }
+    .pg-widget.pg-button:disabled { background-image: var(--pg-disabled, var(--pg-normal, none)); cursor: not-allowed; opacity: 0.8; }
+    .pixel-art .pg-widget.pg-button { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-checkbox {
+      width: 96px;
+      height: 96px;
+      background-image: var(--pg-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .pg-widget.pg-checkbox[data-checked="true"] {
+      background-image: var(--pg-checked, none);
+    }
+    .pixel-art .pg-widget.pg-checkbox { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-panel {
+      width: 340px;
+      min-height: 200px;
+      resize: both;
+      overflow: hidden;
+      padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 10px;
+      background-color: rgba(16,16,20,0.6);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--pg-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 16px;
+      cursor: se-resize;
       color: var(--fg);
     }
+    .pg-widget.pg-panel .pg-panel-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .pixel-art .pg-widget.pg-panel { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .pg-widget.pg-progress {
+      width: 320px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .pg-widget.pg-progress .pg-progress-bar {
+      position: relative;
+      height: 32px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--pg-empty, none);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .pg-widget.pg-progress .pg-progress-fill {
+      position: absolute; inset: 0;
+      background-image: var(--pg-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 calc(100% - var(--pg-progress, 50%)) 0 0);
+      transition: clip-path 0.1s linear;
+    }
+    .pg-widget.pg-progress input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .pixel-art .pg-widget.pg-progress .pg-progress-bar,
+    .pixel-art .pg-widget.pg-progress .pg-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .playground-empty {
+      max-width: 900px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .playground-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .playground-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
+    /* --- Compare slider (before/after reveal) ---------------------------- */
+
+    .compare-section { padding: 24px 0 40px; min-height: 100vh; }
+    .compare-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+
+    .compare-picker-row {
+      max-width: 900px; margin: 0 auto 16px;
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;
+    }
+    .compare-picker-row .vs {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.2em;
+      text-align: center;
+    }
+    .compare-picker {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .compare-picker label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .compare-picker select {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    .compare-picker select:focus { border-color: var(--accent); }
+
+    .compare-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-width: 900px; width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
+        repeating-conic-gradient(#0e0e12 0% 25%, #13131a 0% 50%) 50% / 24px 24px;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+      cursor: ew-resize;
+    }
+    .compare-layer {
+      position: absolute; inset: 0;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+    }
+    .compare-layer.left  { background-image: var(--compare-left, none); }
+    .compare-layer.right {
+      background-image: var(--compare-right, none);
+      clip-path: inset(0 0 0 var(--compare-split, 50%));
+    }
+    .pixel-art .compare-layer { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .compare-divider {
+      position: absolute;
+      top: 0; bottom: 0;
+      left: var(--compare-split, 50%);
+      width: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 16px rgba(245,197,24,0.35);
+      pointer-events: none;
+      transition: left 0.05s linear;
+    }
+    .compare-divider .handle {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #0a0a0a;
+      color: #0a0a0a;
+      display: grid; place-items: center;
+      font-size: 12px;
+      box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .compare-labels {
+      position: absolute;
+      top: 12px; left: 0; right: 0;
+      display: flex; justify-content: space-between;
+      padding: 0 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .compare-labels .label {
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border: 1px solid var(--line-strong);
+    }
+
+    .compare-state-row {
+      max-width: 900px; margin: 16px auto 0;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .compare-state-chip {
+      padding: 6px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+    .compare-state-chip:hover { color: var(--fg); border-color: var(--muted); }
+    .compare-state-chip.active {
+      background: rgba(245, 197, 24, 0.08);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .compare-empty {
+      max-width: 900px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .compare-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .compare-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
+    /* --- Kit poster (canvas composite of the whole session) -------------- */
+
+    .poster-section { padding: 24px 0 40px; min-height: 100vh; }
+    .poster-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+    .poster-stage {
+      max-width: 960px; width: 100%;
+      margin: 0 auto;
+      border: 1px solid var(--line-strong);
+      background: #050509;
+      display: grid; place-items: center;
+      padding: 8px;
+      min-height: 400px;
+    }
+    .poster-stage canvas {
+      display: block;
+      width: 100%; max-width: 100%;
+      height: auto;
+      background: #050509;
+    }
+    .poster-stage .poster-loading {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 80px 24px;
+    }
+    .poster-stage .poster-empty {
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .poster-actions {
+      max-width: 960px; margin: 14px auto 0;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .poster-actions .meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--faint);
+    }
+
+    .poster-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .poster-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
+    /* --- Live demo: Banana Clicker microgame ---------------------------- */
+
+    .livedemo-section { padding: 24px 0 40px; min-height: 100vh; }
+    .livedemo-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+
+    .livedemo-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-width: 960px; width: 100%;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
+        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: 22px 32px 26px;
+    }
+
+    .livedemo-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px;
+    }
+    .livedemo-score {
+      padding: 10px 18px;
+      background-color: rgba(16,16,20,0.75);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--ld-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--fg);
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      font-size: 11px;
+    }
+    .livedemo-score .score-label { color: var(--muted); }
+    .livedemo-score .score-value {
+      color: var(--accent);
+      font-weight: 600;
+      margin-left: 10px;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+    }
+    .pixel-art .livedemo-score { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-pause-row {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .livedemo-pause {
+      width: 22px; height: 22px;
+      background: transparent;
+      background-image: var(--ld-check-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: 1px solid var(--line-strong);
+      cursor: pointer;
+      padding: 0;
+    }
+    .livedemo-pause[data-checked="true"] {
+      background-image: var(--ld-check-checked, none);
+      border-color: var(--accent);
+    }
+    .livedemo-pause.placeholder[data-checked="true"] { background: var(--accent); }
+    .pixel-art .livedemo-pause { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-center {
+      display: grid; place-items: center;
+      position: relative;
+    }
+    .livedemo-button {
+      width: 280px;
+      height: 110px;
+      background-color: transparent;
+      background-image: var(--ld-btn-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--fg);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      letter-spacing: 0.05em;
+      transition: transform 0.05s;
+    }
+    .livedemo-button:hover    { background-image: var(--ld-btn-hover, var(--ld-btn-normal, none)); }
+    .livedemo-button:active   { background-image: var(--ld-btn-pressed, var(--ld-btn-normal, none)); transform: translateY(1px); }
+    .livedemo-button:disabled { background-image: var(--ld-btn-disabled, var(--ld-btn-normal, none)); cursor: not-allowed; opacity: 0.6; }
+    .livedemo-button.placeholder {
+      background-color: var(--accent);
+      color: #000;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-weight: 600;
+    }
+    .pixel-art .livedemo-button { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .livedemo-click-fx {
+      position: absolute;
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+      animation: ld-float-up 0.9s ease-out forwards;
+      text-shadow: 0 0 12px rgba(245,197,24,0.5);
+    }
+    @keyframes ld-float-up {
+      0%   { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-80px); }
+    }
+
+    .livedemo-health-row { display: flex; flex-direction: column; gap: 6px; }
+    .livedemo-health-label {
+      display: flex; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em;
+    }
+    .livedemo-health-bar {
+      position: relative;
+      height: 22px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--ld-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .livedemo-health-fill {
+      position: absolute; inset: 0;
+      background-image: var(--ld-progress-full, linear-gradient(90deg, #ff5c5c, #ffb85c));
+      background-size: auto 100%;
+      clip-path: inset(0 var(--ld-health, 0%) 0 0);
+      transition: clip-path 0.12s linear;
+    }
+    .pixel-art .livedemo-health-bar,
+    .pixel-art .livedemo-health-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .livedemo-overlay {
+      position: absolute; inset: 0;
+      background: rgba(5,5,9,0.85);
+      display: grid; place-items: center;
+      text-align: center;
+      padding: 40px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .livedemo-overlay.active { opacity: 1; pointer-events: auto; }
+    .livedemo-overlay h2 {
+      font-size: 32px; font-weight: 700;
+      color: var(--fg);
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+    .livedemo-overlay .final-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.15em;
+      margin-bottom: 18px;
+    }
+
+    .livedemo-empty {
+      max-width: 960px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .livedemo-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .livedemo-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
+    /* --- "Recolor" palette remix ---------------------------------------- */
+
+    .remix-section { padding: 24px 0 40px; min-height: 100vh; }
+    .remix-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+    .remix-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    @media (max-width: 760px) {
+      .remix-layout { grid-template-columns: 1fr; }
+    }
+
+    .remix-stage {
+      position: relative;
+      aspect-ratio: 1;
+      min-height: 360px;
+      background: repeating-conic-gradient(#101014 0% 25%, #16161c 0% 50%) 50% / 18px 18px;
+      border: 1px solid var(--line-strong);
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+    .remix-stage img {
+      max-width: 80%;
+      max-height: 80%;
+      display: block;
+      transition: filter 0.12s linear;
+    }
+    .pixel-art .remix-stage img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .remix-controls { display: flex; flex-direction: column; gap: 18px; }
+    .remix-picker label, .remix-slider label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+    .remix-picker select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit; outline: none;
+    }
+    .remix-picker select:focus { border-color: var(--accent); }
+
+    .remix-slider .slider-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .remix-slider .slider-head .name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .remix-slider .slider-head .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--accent);
+      font-weight: 500;
+    }
+    .remix-slider input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .remix-actions {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .remix-reset { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .remix-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .remix-state-chips {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      max-width: 1000px; margin: 14px auto 0;
+    }
+    .remix-state-chip {
+      padding: 6px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+    .remix-state-chip:hover { color: var(--fg); border-color: var(--muted); }
+    .remix-state-chip.active {
+      background: rgba(245, 197, 24, 0.08);
+      color: var(--accent); border-color: var(--accent);
+    }
+
+    .remix-empty {
+      max-width: 1000px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .remix-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .remix-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -318,9 +1717,9 @@
 
     <!-- upload -->
     <section id="step-upload" class="step active">
-      <div class="eyebrow">image &rarr; godot</div>
+      <div class="eyebrow">image &rarr; states</div>
       <h1>Drop a UI element.</h1>
-      <p class="lede">One cropped image in. Matching state variants and a drop-in Godot folder out.</p>
+      <p class="lede">One cropped image in. Matching state variants (hover, pressed, disabled) out.</p>
 
       <label id="dropzone" class="dropzone">
         <div class="primary-line">Drop an image here, or click to browse.</div>
@@ -390,6 +1789,16 @@
 
     <!-- results -->
     <section id="step-results" class="step">
+
+      <!-- Session history: thumbnails of previous generations in this session -->
+      <div id="session-history" class="session-history" style="display:none">
+        <div class="session-history-header">
+          <span class="eyebrow">this session</span>
+          <span class="session-history-count mono" id="session-history-count">0</span>
+        </div>
+        <div class="session-history-strip" id="session-history-strip"></div>
+      </div>
+
       <div class="eyebrow">done</div>
       <h1 id="results-title">Component ready.</h1>
       <p class="lede" id="results-lede">Here are the states. The widget below is real &mdash; try it.</p>
@@ -423,35 +1832,224 @@
         </div>
       </div>
 
-      <div class="godot-steps">
-        <div class="eyebrow">use in godot</div>
-        <ol>
-          <li>
-            <div>
-              Unzip the file.
-              <div class="detail">You should get a folder named <code id="step-folder-name">bananadot_button</code>.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              Move that folder into your Godot 4 project's root.
-              <div class="detail">It should sit next to your <code>project.godot</code> file. Godot will show it at <code id="step-res-path">res://bananadot_button/</code>.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              In Godot, open <code id="step-scene-path">bananadot_button/example.tscn</code>.
-              <div class="detail" id="step-run-hint">Run the scene (F6) &mdash; hover and click the button to see the states work.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              To use it in your own scenes, either instance <code>example.tscn</code> as a <code>PackedScene</code>, or add a <code id="step-node-type">TextureButton</code> node and wire its texture properties to the PNGs in <code>assets/</code>.
-              <ul class="prop-list" id="step-prop-list"></ul>
-              <div class="detail">Full notes are in the <code>README.md</code> inside the folder.</div>
-            </div>
-          </li>
-        </ol>
+      <div id="variant-banner" class="variant-banner">
+        Viewing a variant &mdash; modification: <span id="variant-banner-text" class="mono">&mdash;</span>
+      </div>
+
+      <div class="variant-section">
+        <div class="eyebrow">create a variant</div>
+        <div style="color: var(--muted); font-size: 13px; margin-top: 6px;">
+          Make another component like this one with a small change &mdash; different label, different color, anything visual.
+          The same state set (hover, pressed, disabled) gets regenerated to match.
+        </div>
+        <div class="variant-form">
+          <input
+            id="variant-input"
+            type="text"
+            placeholder="e.g. change the label to STOP, or make it red, or add a pause icon"
+            maxlength="200"
+          />
+          <div class="variant-actions">
+            <button id="btn-variant" class="btn btn-accent">Generate variant</button>
+            <span class="variant-hint mono">3 options, pick your favourite</span>
+          </div>
+        </div>
+
+        <div id="variant-options" class="variant-options">
+          <div class="eyebrow">pick your favourite</div>
+          <div class="variant-options-strip"></div>
+        </div>
+      </div>
+
+      <div class="kit-section">
+        <div class="eyebrow">matching kit</div>
+        <div class="kit-intro">
+          Generate the OTHER three component types in the same visual style. One click,
+          one coherent UI kit. Each component runs through the full pipeline &mdash;
+          state variants, live preview, downloadable zip &mdash; just in the style of
+          the component you already have.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-kit" class="btn btn-accent">Generate matching kit</button>
+          <span class="variant-hint mono">~2-3 min total</span>
+        </div>
+
+        <div id="kit-progress" class="kit-progress">
+          <!-- progress rows injected per target -->
+        </div>
+
+        <div id="kit-members" class="kit-members">
+          <!-- completed kit member cards injected here -->
+        </div>
+      </div>
+
+      <!-- Launcher for the "See in a game screen" mockup scene -->
+
+      <div class="poster-launcher-section">
+        <div class="eyebrow">ship it</div>
+        <div class="launcher-intro">
+          Composite everything you've generated this session into a single
+          shareable PNG. Title, tile grid, palette swatches, date. The
+          artifact you post on X or drop in a deck.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-poster" class="btn btn-accent">Export kit poster</button>
+          <span class="variant-hint mono">1600&times;900 PNG, composited locally, no upload</span>
+        </div>
+      </div>
+
+      <div class="livedemo-launcher-section">
+        <div class="eyebrow">play with it</div>
+        <div class="launcher-intro">
+          Tiny playable microgame wearing your real textures. Click the
+          button to score, health drains, game over, play again. Your kit
+          stops being a gallery and starts playing a role in a game loop.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-livedemo" class="btn btn-accent">Play live demo</button>
+          <span class="variant-hint mono">Banana Clicker &middot; needs a button to play</span>
+        </div>
+      </div>
+
+      <div class="remix-launcher-section">
+        <div class="eyebrow">recolor</div>
+        <div class="launcher-intro">
+          Shift hue, saturation, or brightness on any session component in
+          real time. Happy with the result? Save it as a new variant. No
+          Gemini call &mdash; just fast creative iteration.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-remix" class="btn btn-accent">Recolor</button>
+          <span class="variant-hint mono">live preview &middot; save bakes filters into fresh PNGs</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- remix / recolor scene -->
+    <section id="step-remix" class="step remix-section">
+      <div class="remix-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-remix-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">recolor &middot; palette remix</span>
+        </div>
+      </div>
+
+      <div id="remix-body">
+        <!-- populated by openRemix(); either layout + controls, or empty state -->
+      </div>
+
+      <div class="remix-state-chips" id="remix-state-chips">
+        <!-- state chips per available variant key -->
+      </div>
+    </section>
+
+    <!-- live demo scene -->
+    <section id="step-livedemo" class="step livedemo-section">
+      <div class="livedemo-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-livedemo-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">banana clicker</span>
+        </div>
+      </div>
+
+      <div id="livedemo-stage-host">
+        <!-- the game stage goes here, built in JS so we can easily reset -->
+      </div>
+    </section>
+
+    <!-- poster scene -->
+    <section id="step-poster" class="step poster-section">
+      <div class="poster-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-poster-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">kit poster</span>
+        </div>
+      </div>
+
+      <div id="poster-stage-host" class="poster-stage">
+        <div class="poster-loading">Composing the poster&hellip;</div>
+      </div>
+
+      <div class="poster-actions">
+        <span id="poster-meta" class="meta">&mdash;</span>
+        <button id="btn-poster-download" class="btn btn-accent" disabled>Download PNG</button>
+      </div>
+    </section>
+
+    <!-- compare scene -->
+    <section id="step-compare" class="step compare-section">
+      <div class="compare-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-compare-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">compare · before / after</span>
+        </div>
+      </div>
+
+      <div class="compare-picker-row" id="compare-picker-row">
+        <div class="compare-picker">
+          <label for="compare-a">Entry A</label>
+          <select id="compare-a"></select>
+        </div>
+        <div class="vs">vs</div>
+        <div class="compare-picker">
+          <label for="compare-b">Entry B</label>
+          <select id="compare-b"></select>
+        </div>
+      </div>
+
+      <div id="compare-stage-host">
+        <!-- stage or empty state injected here -->
+      </div>
+
+      <div class="compare-state-row" id="compare-state-row">
+        <!-- state chips: source / normal / hover / pressed / disabled / checked / etc -->
+      </div>
+    </section>
+
+    <!-- playground scene -->
+    <section id="step-playground" class="step playground-section">
+      <div class="playground-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-playground-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">interaction playground</span>
+        </div>
+        <div class="playground-size-control">
+          <span>size</span>
+          <input id="playground-size" type="range" min="50" max="300" step="5" value="100" />
+          <span class="value" id="playground-size-value">1.00&times;</span>
+        </div>
+      </div>
+
+      <div class="playground-stage">
+        <div id="playground-widget-host" class="playground-widget-host">
+          <!-- the active widget is injected here -->
+        </div>
+        <div class="playground-state-readout">
+          state: <span class="state" id="playground-state">idle</span>
+        </div>
+      </div>
+
+      <div class="playground-chips" id="playground-chips">
+        <!-- chips per session-history entry -->
+      </div>
+    </section>
+
+    <!-- mockup scene -->
+    <section id="step-mockup" class="step mockup-section">
+      <div class="mockup-header">
+        <div class="eyebrow">game screen mockup</div>
+        <button id="btn-mockup-back" class="btn btn-ghost">&larr; Back to results</button>
+      </div>
+
+      <div class="mockup-tabs" id="mockup-tabs">
+        <button class="mockup-tab active" data-layout="pause">Pause Menu</button>
+        <button class="mockup-tab" data-layout="hud">HUD</button>
+        <button class="mockup-tab" data-layout="title">Title Screen</button>
+      </div>
+
+      <div id="mockup-stage-host">
+        <!-- populated by renderMockupTab(layoutKey) -->
       </div>
     </section>
 
@@ -467,76 +2065,111 @@
 
   <script>
     // --- component registry -------------------------------------------------
-    // Mirrors backend/app/pipeline/godot.py._SPECS. Keep them in sync when
-    // adding a new component: states list, live-widget id, Godot node type,
-    // run hint, and the texture-prop → asset-path map shown in step 4.
+    // One entry per supported component type: the state list that drives
+    // which widget preview is active, and copy for the results page.
     const COMPONENTS = {
       button: {
         states: ['normal', 'hover', 'pressed', 'disabled'],
         widgetId: 'live-button',
         resultsLede: "Here are the states. The button below is real — hover, click, toggle disabled.",
-        liveHint: "Behaves exactly like the Godot TextureButton will.",
+        liveHint: "Hover, click, and toggle disabled to see the states swap.",
         controls: 'button',
-        godot: {
-          nodeType: 'TextureButton',
-          runHint: 'hover and click the button to see the states work',
-          props: [
-            ['texture_normal',   'assets/normal.png'],
-            ['texture_pressed',  'assets/pressed.png'],
-            ['texture_hover',    'assets/hover.png'],
-            ['texture_disabled', 'assets/disabled.png'],
-          ],
-        },
       },
       panel: {
         states: ['normal'],
         widgetId: 'live-panel',
-        resultsLede: "Single panel sprite. Below, it stretches as a 9-slice — same math Godot's NinePatchRect will run.",
-        liveHint: "Renders like a Godot NinePatchRect — the frame scales, corners don't.",
+        resultsLede: "Single panel sprite. Below, it stretches as a 9-slice — frame stays crisp, center fills.",
+        liveHint: "The frame stretches and corners stay crisp.",
         controls: 'panel',
-        godot: {
-          nodeType: 'NinePatchRect',
-          runHint: "drag the node's size in the editor — the frame stretches and corners stay crisp",
-          props: [
-            ['texture', 'assets/normal.png'],
-          ],
-        },
       },
       checkbox: {
         states: ['unchecked', 'checked'],
         widgetId: 'live-checkbox',
         resultsLede: "Two states for a toggle. Click the widget below to flip between them.",
-        liveHint: "Behaves like a Godot TextureButton with toggle_mode = true.",
+        liveHint: "Click to toggle between unchecked and checked.",
         controls: 'checkbox',
-        godot: {
-          nodeType: 'TextureButton',
-          runHint: 'click the button to toggle between unchecked and checked',
-          props: [
-            ['toggle_mode',     'true'],
-            ['texture_normal',  'assets/unchecked.png'],
-            ['texture_pressed', 'assets/checked.png'],
-          ],
-        },
       },
       progress_bar: {
         states: ['empty', 'full'],
         widgetId: 'live-progress',
-        resultsLede: "Two states — empty frame and full fill. The slider below reveals the fill exactly how Godot will at runtime.",
-        liveHint: "Reveals left-to-right like a Godot TextureProgressBar.",
+        resultsLede: "Two states — empty frame and full fill. The slider below reveals the fill left-to-right.",
+        liveHint: "The slider reveals the fill left-to-right.",
         controls: 'progress_bar',
-        godot: {
-          nodeType: 'TextureProgressBar',
-          runHint: 'drag the value property in the inspector to watch the fill reveal left-to-right',
-          props: [
-            ['texture_under',    'assets/empty.png'],
-            ['texture_progress', 'assets/full.png'],
-          ],
-        },
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error'];
-    const state = { file: null, componentType: 'button', result: null, elapsedTimer: null };
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster', 'livedemo', 'remix'];
+    const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
+
+    // --- session history ------------------------------------------------------
+    // In-memory only. Lost on refresh; acceptable for a demo session.
+    const sessionHistory = [];
+    let _historySeq = 0;
+
+    function _historyLabelFor(componentType) {
+      const count = sessionHistory.filter(e => e.type === componentType).length + 1;
+      const n = String(count).padStart(2, '0');
+      return `${componentType} · ${n}`;
+    }
+
+    function pushHistory(file, componentType, data, labelOverride) {
+      const id = `h${++_historySeq}`;
+      sessionHistory.push({
+        id,
+        type: componentType,
+        label: labelOverride || _historyLabelFor(componentType),
+        source: data.source,   // data URL — thumbnail
+        file,                  // File object — for re-POSTing if needed
+        data,                  // full /preview or /variant response
+        created: Date.now(),
+      });
+      state.historyId = id;
+      renderSessionHistory();
+    }
+
+    // Convert a data URL (as returned from /preview or /variant) into a File,
+    // so we can re-POST it as the source image for a new variant request.
+    function dataUrlToFile(dataUrl, filename) {
+      const [header, base64] = dataUrl.split(',');
+      const mime = (header.match(/:(.*?);/) || [,'image/png'])[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new File([bytes], filename, { type: mime });
+    }
+
+    function renderSessionHistory() {
+      const root = document.getElementById('session-history');
+      const strip = document.getElementById('session-history-strip');
+      if (sessionHistory.length === 0) { root.style.display = 'none'; return; }
+      root.style.display = '';
+      document.getElementById('session-history-count').textContent = sessionHistory.length;
+      strip.innerHTML = '';
+      // Most recent first.
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        const entry = sessionHistory[i];
+        const btn = document.createElement('button');
+        btn.className = 'history-thumb' + (state.historyId === entry.id ? ' active' : '');
+        btn.title = entry.label;
+        btn.innerHTML = `
+          <div class="thumb-img"><img src="${entry.source}" alt="${entry.label}" /></div>
+          <span class="thumb-label mono">${entry.label}</span>`;
+        btn.addEventListener('click', () => loadFromHistory(entry.id));
+        strip.appendChild(btn);
+      }
+    }
+
+    function loadFromHistory(id) {
+      const entry = sessionHistory.find(e => e.id === id);
+      if (!entry) return;
+      state.file = entry.file;
+      state.componentType = entry.type;
+      state.result = entry.data;
+      state.historyId = id;
+      renderResults(entry.data);
+      show('results');
+      renderSessionHistory();   // refresh the active highlight
+    }
 
     function show(step) {
       steps.forEach(s => document.getElementById('step-' + s).classList.toggle('active', s === step));
@@ -599,7 +2232,7 @@
       { at: 10, text: 'Next state…' },
       { at: 18, text: 'Still generating…' },
       { at: 26, text: 'Finishing up…' },
-      { at: 34, text: 'Packaging the Godot bundle…' },
+      { at: 34, text: 'Packaging the state set…' },
     ];
 
     async function generate() {
@@ -623,6 +2256,7 @@
         const data = await res.json();
         state.result = data;
         clearInterval(state.elapsedTimer);
+        pushHistory(state.file, state.componentType, data);
         renderResults(data);
         show('results');
       } catch (err) {
@@ -664,28 +2298,9 @@
       widget.classList.add('active');
       wireLiveWidget(data, spec);
 
-      // Install-step copy.
-      const folder = `bananadot_${data.component_type}`;
+      // Bundle meta — zip name + size, no engine-specific copy.
       document.getElementById('bundle-meta').textContent =
         `${data.zip_name} · ${Math.ceil(data.zip_base64.length * 0.75 / 1024)} KB`;
-      document.getElementById('step-folder-name').textContent = folder;
-      document.getElementById('step-res-path').textContent = `res://${folder}/`;
-      document.getElementById('step-scene-path').textContent = `${folder}/example.tscn`;
-      document.getElementById('step-run-hint').textContent =
-        `Run the scene (F6) — ${spec.godot.runHint}.`;
-      document.getElementById('step-node-type').textContent = spec.godot.nodeType;
-
-      const propList = document.getElementById('step-prop-list');
-      propList.innerHTML = '';
-      for (const [prop, assetPath] of spec.godot.props) {
-        const li = document.createElement('li');
-        // `toggle_mode = true` is a bool, not an asset path — render as-is.
-        const isAsset = assetPath.startsWith('assets/');
-        li.innerHTML = isAsset
-          ? `<code>${prop}</code> → <code>${assetPath}</code>`
-          : `<code>${prop}</code> = <code>${assetPath}</code>`;
-        propList.appendChild(li);
-      }
     }
 
     function wireLiveWidget(data, spec) {
@@ -792,9 +2407,161 @@
     });
 
     document.getElementById('btn-restart').addEventListener('click', () => {
-      state.file = null; state.result = null; fileInput.value = '';
+      // 'Start over' returns to the upload step but KEEPS session history —
+      // the strip carries forward so the user can come back to earlier work.
+      state.file = null;
+      state.result = null;
+      state.historyId = null;
+      fileInput.value = '';
+      document.getElementById('variant-banner').classList.remove('active');
+      document.getElementById('variant-input').value = '';
       show('upload');
     });
+
+    // --- variant: create a similar component with a small modification
+    // New flow: first call /variant/options with count=3 and show the three
+    // candidates side-by-side. User picks one; that image becomes the new
+    // source and we run /preview on it for the full state pipeline. No more
+    // single-shot guessing — the user is in the loop.
+    document.getElementById('btn-variant').addEventListener('click', generateVariant);
+    document.getElementById('variant-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generateVariant();
+    });
+
+    const VARIANT_OPTION_COUNT = 3;
+
+    async function generateVariant() {
+      const text = document.getElementById('variant-input').value.trim();
+      if (!text) {
+        document.getElementById('variant-input').focus();
+        return;
+      }
+      if (!state.file) {
+        showError('Original source image is no longer in session. Start over and upload again.');
+        return;
+      }
+
+      const picker = document.getElementById('variant-options');
+      const strip = picker.querySelector('.variant-options-strip');
+      strip.innerHTML = '';
+      for (let i = 0; i < VARIANT_OPTION_COUNT; i++) strip.appendChild(_newOptionSlot(i));
+      picker.style.display = '';
+
+      const btn = document.getElementById('btn-variant');
+      btn.disabled = true;
+      btn.textContent = 'Generating options...';
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('component_type', state.componentType);
+        form.append('modification', text);
+        form.append('count', String(VARIANT_OPTION_COUNT));
+
+        const res = await fetch('/variant/options', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+
+        await parseSSE(res, (name, data) => _handleBatchEvent(name, data, text));
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate variant';
+      }
+    }
+
+    function _newOptionSlot(index) {
+      const slot = document.createElement('div');
+      slot.className = 'option-slot pending';
+      slot.dataset.index = index;
+      slot.innerHTML = `
+        <div class="option-preview">
+          <span class="option-spinner"></span>
+          <img alt="option ${index + 1}" />
+        </div>
+        <button class="btn option-btn" disabled>Generating&hellip;</button>
+      `;
+      return slot;
+    }
+
+    function _handleBatchEvent(name, data, modification) {
+      switch (name) {
+        case 'batch_started':
+          // No-op — slots are already laid out.
+          break;
+        case 'option_started':
+          // Already showing pending state; nothing to update.
+          break;
+        case 'option_completed': {
+          const slot = document.querySelector(`.option-slot[data-index="${data.index}"]`);
+          if (!slot) return;
+          slot.querySelector('img').src = data.image;
+          slot.classList.remove('pending');
+          slot.classList.add('done');
+          const btn = slot.querySelector('.option-btn');
+          btn.disabled = false;
+          btn.textContent = 'Use this one';
+          btn.addEventListener('click', () => pickVariantOption(data.image, modification));
+          break;
+        }
+        case 'option_failed': {
+          const slot = document.querySelector(`.option-slot[data-index="${data.index}"]`);
+          if (!slot) return;
+          slot.classList.remove('pending');
+          slot.classList.add('failed');
+          const btn = slot.querySelector('.option-btn');
+          btn.textContent = 'Failed';
+          btn.title = data.error || 'generation failed';
+          break;
+        }
+        case 'batch_done':
+          break;
+      }
+    }
+
+    // User picks one of the candidates → it becomes the new source; we run the
+    // full state pipeline via /preview and let renderResults take over.
+    async function pickVariantOption(dataUrl, modification) {
+      const modifiedFile = dataUrlToFile(dataUrl, `variant_${Date.now()}.png`);
+      state.file = modifiedFile;
+
+      document.getElementById('variant-options').style.display = 'none';
+      document.getElementById('variant-input').value = '';
+
+      show('generating');
+      const start = Date.now();
+      state.elapsedTimer = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        document.getElementById('generating-elapsed').textContent = s + 's';
+        document.getElementById('generating-status').textContent =
+          s < 10 ? 'Generating state variants from your pick…' :
+          s < 25 ? 'Working through hover / pressed / disabled…' :
+          'Packaging the state set…';
+      }, 1000);
+
+      try {
+        const form = new FormData();
+        form.append('image', modifiedFile);
+        form.append('component_type', state.componentType);
+        const res = await fetch('/preview', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+        const data = await res.json();
+        state.result = data;
+        clearInterval(state.elapsedTimer);
+
+        document.getElementById('variant-banner-text').textContent = modification;
+        document.getElementById('variant-banner').classList.add('active');
+
+        const label = `${state.componentType} · ${modification.slice(0, 24)}`;
+        pushHistory(modifiedFile, state.componentType, data, label);
+
+        renderResults(data);
+        show('results');
+      } catch (err) {
+        clearInterval(state.elapsedTimer);
+        showError(err.message || String(err));
+      }
+    }
 
     function showError(detail) {
       document.getElementById('error-detail').textContent = detail;
@@ -803,6 +2570,1562 @@
     document.getElementById('btn-retry').addEventListener('click', () => {
       show(state.file ? 'configure' : 'upload');
     });
+
+    // --- kit generation -------------------------------------------------------
+    // Streams SSE from POST /kit. One row per target component, each with a
+    // progress bar that pulses while that component is generating and fills
+    // solid when it completes.
+
+    document.getElementById('btn-kit').addEventListener('click', generateKit);
+
+    async function generateKit() {
+      if (!state.file) {
+        showError('No source image in session. Upload one first.');
+        return;
+      }
+      const sourceType = state.componentType;
+      const btn = document.getElementById('btn-kit');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      // Reset any previous kit run.
+      document.getElementById('kit-members').innerHTML = '';
+      const progressEl = document.getElementById('kit-progress');
+      progressEl.innerHTML = '';
+      progressEl.classList.remove('active');
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('source_component_type', sourceType);
+
+        const res = await fetch('/kit', { method: 'POST', body: form });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        await parseSSE(res, handleKitEvent);
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate matching kit';
+      }
+    }
+
+    // Generic SSE parser: reads the response body as a stream, splits on \n\n,
+    // dispatches each event to `onEvent(eventName, dataObj)`.
+    async function parseSSE(response, onEvent) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sepIdx;
+        while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx + 2);
+          if (!frame) continue;
+          const { eventName, data } = parseSSEFrame(frame);
+          if (data !== undefined) onEvent(eventName, data);
+        }
+      }
+    }
+
+    function parseSSEFrame(frame) {
+      let eventName = 'message';
+      const dataLines = [];
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event: ')) eventName = line.slice(7);
+        else if (line.startsWith('data: ')) dataLines.push(line.slice(6));
+      }
+      if (dataLines.length === 0) return { eventName, data: undefined };
+      try {
+        return { eventName, data: JSON.parse(dataLines.join('\n')) };
+      } catch {
+        return { eventName, data: undefined };
+      }
+    }
+
+    function handleKitEvent(name, data) {
+      switch (name) {
+        case 'kit_started':
+          kitInitProgress(data.targets);
+          break;
+        case 'component_started':
+          kitMarkActive(data.component);
+          break;
+        case 'component_completed':
+          kitMarkDone(data.component);
+          kitAppendMember(data);
+          break;
+        case 'component_failed':
+          kitMarkFailed(data.component, data.error);
+          break;
+        case 'kit_done':
+          // leave the rows visible; user can see what completed.
+          break;
+      }
+    }
+
+    function kitInitProgress(targets) {
+      const progressEl = document.getElementById('kit-progress');
+      progressEl.innerHTML = '';
+      for (const target of targets) {
+        const row = document.createElement('div');
+        row.className = 'kit-row pending';
+        row.dataset.component = target;
+        row.innerHTML = `
+          <span class="kit-row-label">${target}</span>
+          <div class="kit-bar"><div class="kit-bar-fill"></div></div>
+          <span class="kit-state">pending</span>
+        `;
+        progressEl.appendChild(row);
+      }
+      progressEl.classList.add('active');
+    }
+
+    function kitRow(component) {
+      return document.querySelector(`.kit-row[data-component="${component}"]`);
+    }
+
+    function kitMarkActive(component) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('pending');
+      row.classList.add('active');
+      row.querySelector('.kit-state').textContent = 'working...';
+    }
+
+    function kitMarkDone(component) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('active', 'pending');
+      row.classList.add('done');
+      row.querySelector('.kit-state').textContent = 'done';
+    }
+
+    function kitMarkFailed(component, error) {
+      const row = kitRow(component);
+      if (!row) return;
+      row.classList.remove('active', 'pending');
+      row.classList.add('failed');
+      row.querySelector('.kit-state').textContent = 'failed';
+      row.title = error || 'generation failed';
+    }
+
+    function kitAppendMember(data) {
+      const members = document.getElementById('kit-members');
+      const card = document.createElement('div');
+      card.className = 'kit-member';
+      const sizeKb = Math.ceil(data.zip_base64.length * 0.75 / 1024);
+      const stateEntries = Object.entries(data.variants);
+      const cols = stateEntries.length;
+
+      card.innerHTML = `
+        <div class="kit-member-header">
+          <span class="label">${data.component}</span>
+          <span class="meta">${data.zip_name} · ${sizeKb} KB</span>
+        </div>
+        <div class="kit-member-grid" style="grid-template-columns: repeat(${cols}, 1fr);">
+          ${stateEntries.map(([s, url]) => `
+            <div class="variant">
+              <div class="preview"><img src="${url}" alt="${s}" /></div>
+              <div class="label">${s}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="kit-try-row">
+          <div class="kit-try-label">try it</div>
+          <div class="kit-try-stage" data-component="${data.component}"></div>
+        </div>
+
+        <div class="kit-member-download">
+          <button class="btn btn-ghost btn-download-kit" data-zip-b64="${data.zip_base64}" data-zip-name="${data.zip_name}">
+            Download ${data.component} zip
+          </button>
+        </div>
+      `;
+
+      // Build the interactive widget inside the stage based on component type.
+      const stage = card.querySelector('.kit-try-stage');
+      _buildKitTryWidget(stage, data);
+
+      card.querySelector('.btn-download-kit').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const bytes = Uint8Array.from(atob(btn.dataset.zipB64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'application/zip' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = btn.dataset.zipName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      members.appendChild(card);
+    }
+
+    // Build a small interactive widget matching the component type, attach it
+    // to the stage element. Uses the kit-member's own data.variants to drive
+    // CSS custom properties on the stage so textures are scoped per member.
+    function _buildKitTryWidget(stage, data) {
+      const v = data.variants || {};
+      switch (data.component) {
+        case 'button':       _buildKtButton(stage, v);    break;
+        case 'panel':        _buildKtPanel(stage, v);     break;
+        case 'checkbox':     _buildKtCheckbox(stage, v);  break;
+        case 'progress_bar': _buildKtProgress(stage, v);  break;
+        default:
+          stage.innerHTML = `<span class="kt-ctrl-row">no interactive preview for ${data.component}</span>`;
+      }
+    }
+
+    function _buildKtButton(stage, v) {
+      if (v.normal)   stage.style.setProperty('--kt-btn-normal',   `url('${v.normal}')`);
+      if (v.hover)    stage.style.setProperty('--kt-btn-hover',    `url('${v.hover}')`);
+      if (v.pressed)  stage.style.setProperty('--kt-btn-pressed',  `url('${v.pressed}')`);
+      if (v.disabled) stage.style.setProperty('--kt-btn-disabled', `url('${v.disabled}')`);
+      stage.innerHTML = `
+        <button class="kt-btn" aria-label="try button"></button>
+        <label class="kt-ctrl-row">
+          <input type="checkbox" />
+          disabled
+        </label>
+      `;
+      const btn = stage.querySelector('.kt-btn');
+      const disabledChk = stage.querySelector('input[type="checkbox"]');
+      disabledChk.addEventListener('change', () => { btn.disabled = disabledChk.checked; });
+    }
+
+    function _buildKtCheckbox(stage, v) {
+      if (v.unchecked) stage.style.setProperty('--kt-check-unchecked', `url('${v.unchecked}')`);
+      if (v.checked)   stage.style.setProperty('--kt-check-checked',   `url('${v.checked}')`);
+      stage.innerHTML = `
+        <button class="kt-check" data-checked="false" aria-label="try checkbox"></button>
+        <span class="kt-ctrl-row">click to toggle</span>
+      `;
+      const cb = stage.querySelector('.kt-check');
+      cb.addEventListener('click', () => {
+        cb.dataset.checked = cb.dataset.checked === 'true' ? 'false' : 'true';
+      });
+    }
+
+    function _buildKtPanel(stage, v) {
+      if (v.normal) stage.style.setProperty('--kt-panel', `url('${v.normal}')`);
+      stage.innerHTML = `
+        <div class="kt-panel">drag right edge to resize</div>
+        <span class="kt-ctrl-row">9-slice frame stays crisp</span>
+      `;
+    }
+
+    function _buildKtProgress(stage, v) {
+      if (v.empty) stage.style.setProperty('--kt-progress-empty', `url('${v.empty}')`);
+      if (v.full)  stage.style.setProperty('--kt-progress-full',  `url('${v.full}')`);
+      stage.innerHTML = `
+        <div class="kt-progress">
+          <div class="kt-progress-bar"><div class="kt-progress-fill"></div></div>
+          <input type="range" min="0" max="100" value="50" aria-label="fill" />
+        </div>
+      `;
+      const range = stage.querySelector('input[type="range"]');
+      const setPct = (p) => stage.querySelector('.kt-progress').style.setProperty('--kt-progress-pct', `${p}%`);
+      setPct(50);
+      range.addEventListener('input', (e) => setPct(e.target.value));
+    }
+
+    // --- mockup scene: "See in a game screen" -------------------------------
+    // Pulls from sessionHistory (built up as the user generates components).
+    // Builds a fake game pause-menu with real generated textures when they
+    // exist, placeholder tiles when they don't. Zero backend calls — this
+    // is a pure rendering of stuff already in memory.
+
+    // launcher for 'See in a game screen' removed per user request — the
+    // step and openMockup() scaffolding remain as dead code but no UI hits
+    // them anymore.
+    document.getElementById('btn-mockup-back')?.addEventListener('click', () => show('results'));
+
+    // Grab the most recent entry for a given component_type from sessionHistory,
+    // or null if none. Browsing backwards = newest first.
+    function _latestHistory(type) {
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        if (sessionHistory[i].type === type) return sessionHistory[i];
+      }
+      return null;
+    }
+
+    // Up to N most recent button entries, newest first — used to populate the
+    // 3 menu buttons with distinct textures when the user has generated
+    // multiple buttons (e.g. via /variant: START -> STOP -> OPTIONS).
+    function _latestButtons(n) {
+      const out = [];
+      for (let i = sessionHistory.length - 1; i >= 0 && out.length < n; i--) {
+        if (sessionHistory[i].type === 'button') out.push(sessionHistory[i]);
+      }
+      return out;
+    }
+
+    // Layout registry — each builder receives the gathered history entries
+    // and returns a DOM stage. Add new layouts here + a tab in the HTML.
+    const MOCKUP_LAYOUTS = {
+      pause: _layoutPauseMenu,
+      hud:   _layoutHUD,
+      title: _layoutTitle,
+    };
+
+    function openMockup() {
+      // Respect any previously-picked tab; otherwise default to pause.
+      renderMockupTab(state.mockupLayout || 'pause');
+    }
+
+    function renderMockupTab(layoutKey) {
+      state.mockupLayout = layoutKey;
+
+      const stageHost = document.getElementById('mockup-stage-host');
+      stageHost.innerHTML = '';
+
+      _syncMockupTabs(layoutKey);
+
+      // Empty session → polite prompt, same across layouts.
+      if (sessionHistory.length === 0) {
+        stageHost.innerHTML = `
+          <div class="mockup-stage" style="display:block">
+            <div class="mockup-empty">
+              No components generated yet this session.<br />
+              Head back, upload something, and return here to see it in context.
+            </div>
+          </div>
+        `;
+        show('mockup');
+        return;
+      }
+
+      const entries = _gatherHistoryEntries();
+      const builder = MOCKUP_LAYOUTS[layoutKey] || MOCKUP_LAYOUTS.pause;
+      const stage = builder(entries);
+      _applyMockupTextures(stage, entries.buttons, entries.panel, entries.checkbox, entries.progress);
+      stageHost.appendChild(stage);
+
+      show('mockup');
+    }
+
+    // Wire tab clicks once on load. (Mockup step is guaranteed rendered.)
+    document.querySelectorAll('.mockup-tab').forEach(tab => {
+      tab.addEventListener('click', () => renderMockupTab(tab.dataset.layout));
+    });
+
+    function _syncMockupTabs(layoutKey) {
+      document.querySelectorAll('.mockup-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.layout === layoutKey);
+      });
+    }
+
+    function _gatherHistoryEntries() {
+      return {
+        buttons:  _latestButtons(3),
+        panel:    _latestHistory('panel'),
+        checkbox: _latestHistory('checkbox'),
+        progress: _latestHistory('progress_bar'),
+      };
+    }
+
+    // --- layout: pause menu (original) --------------------------------------
+    function _layoutPauseMenu(entries) {
+      const { buttons, panel, checkbox, progress } = entries;
+      const menuLabels = ['Start', 'Options', 'Quit'];
+
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage layout-pause';
+      stage.appendChild(_mockupTopStrip(progress));
+      stage.appendChild(_mockupCenter(panel, buttons, menuLabels, checkbox));
+      stage.appendChild(_mockupBottomStrip(buttons[0] || panel || checkbox || progress));
+      return stage;
+    }
+
+    // --- layout: HUD --------------------------------------------------------
+    function _layoutHUD(entries) {
+      const { buttons, panel, checkbox, progress } = entries;
+
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage layout-hud';
+      stage.innerHTML = `
+        <div class="hud-top">
+          <div class="hud-health">
+            <span class="hud-label">HP  72 / 100</span>
+            <div class="hud-bar"><div class="hud-bar-fill"></div></div>
+          </div>
+          <div class="hud-score mockup-panel-inline">Score <b>01 234</b></div>
+        </div>
+        <div class="hud-center"><span>+</span></div>
+        <div class="hud-bottom">
+          <div class="hud-abilities"></div>
+          <div class="hud-minimap mockup-panel-inline">
+            <div>Minimap</div>
+            <div class="minimap-dot"></div>
+          </div>
+        </div>
+      `;
+
+      // Ability buttons: use up to 3 different button history entries if
+      // available, each with hotkey badge.
+      const hotkeys = ['Q', 'W', 'E'];
+      const abilities = stage.querySelector('.hud-abilities');
+      for (let i = 0; i < 3; i++) {
+        const entry = buttons[i] || buttons[0] || null;
+        const btn = document.createElement('button');
+        btn.className = entry ? 'mockup-menu-btn hud-ability' : 'mockup-menu-btn hud-ability placeholder';
+        btn.innerHTML = `<span class="hotkey">${hotkeys[i]}</span>`;
+        if (entry) {
+          const v = entry.data.variants || {};
+          if (v.normal)   btn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+          if (v.hover)    btn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+          if (v.pressed)  btn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+          if (v.disabled) btn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+        }
+        btn.addEventListener('click', (e) => e.preventDefault());
+        abilities.appendChild(btn);
+      }
+
+      return stage;
+    }
+
+    // --- layout: title screen -----------------------------------------------
+    function _layoutTitle(entries) {
+      const { buttons } = entries;
+      const anyBtn = buttons[0];
+
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage layout-title';
+      stage.innerHTML = `
+        <div class="title-spacer"></div>
+        <div class="title-center">
+          <div class="title-brand">BANANADOT ARCADE</div>
+          <div class="title-tagline">press start to begin</div>
+          <button class="mockup-menu-btn title-start${anyBtn ? '' : ' placeholder'}">
+            <span class="label">START</span>
+          </button>
+        </div>
+        <div class="title-footer">
+          <span>v1.0.0</span>
+          <span>&copy; bananadot studio</span>
+        </div>
+      `;
+
+      if (anyBtn) {
+        const startBtn = stage.querySelector('.title-start');
+        const v = anyBtn.data.variants || {};
+        if (v.normal)   startBtn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+        if (v.hover)    startBtn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+        if (v.pressed)  startBtn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+        if (v.disabled) startBtn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+      }
+
+      return stage;
+    }
+
+    function _mockupTopStrip(progressEntry) {
+      const el = document.createElement('div');
+      el.className = 'mockup-top';
+      el.innerHTML = `
+        <span>loading</span>
+        <div class="mockup-progress"><div class="mockup-progress-fill"></div></div>
+        <span>68%</span>
+      `;
+      return el;
+    }
+
+    function _mockupCenter(panelEntry, buttons, labels, checkboxEntry) {
+      const center = document.createElement('div');
+      center.className = 'mockup-center';
+
+      const panel = document.createElement('div');
+      panel.className = 'mockup-panel';
+      panel.innerHTML = `
+        <div>
+          <div class="mockup-title">Bananadot Arcade</div>
+          <div class="mockup-subtitle">press start</div>
+        </div>
+        <div class="mockup-menu"></div>
+        <div class="mockup-checkbox-row">
+          <button class="mockup-check${checkboxEntry ? '' : ' placeholder'}" data-checked="true" aria-label="Sound"></button>
+          <span>Enable sound</span>
+        </div>
+      `;
+
+      const menu = panel.querySelector('.mockup-menu');
+      // Three menu buttons; each pulls its own texture entry if available.
+      for (let i = 0; i < 3; i++) {
+        const entry = buttons[i] || buttons[0] || null;
+        const btn = document.createElement('button');
+        btn.className = entry ? 'mockup-menu-btn' : 'mockup-menu-btn placeholder';
+        btn.dataset.slot = i;
+        btn.innerHTML = `<span class="label">${labels[i] || `option ${i + 1}`}</span>`;
+        // Per-slot CSS vars so multiple different buttons render side-by-side.
+        if (entry) {
+          const v = entry.data.variants || {};
+          if (v.normal)   btn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+          if (v.hover)    btn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+          if (v.pressed)  btn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+          if (v.disabled) btn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+        }
+        btn.addEventListener('click', (e) => e.preventDefault());
+        menu.appendChild(btn);
+      }
+
+      const check = panel.querySelector('.mockup-check');
+      check.addEventListener('click', () => {
+        const cur = check.dataset.checked === 'true';
+        check.dataset.checked = String(!cur);
+      });
+
+      center.appendChild(panel);
+      return center;
+    }
+
+    function _mockupBottomStrip(anyEntry) {
+      const el = document.createElement('div');
+      el.className = 'mockup-bottom';
+      const swatches = _extractSwatches(anyEntry);
+      el.innerHTML = `
+        <span>bananadot mockup</span>
+        <div class="mockup-palette">${swatches.map(c => `<span style="background:${c}"></span>`).join('')}</div>
+      `;
+      return el;
+    }
+
+    function _extractSwatches(entry) {
+      // If the backend supplied dominant colors via source_analysis, use
+      // them; otherwise synthesise from the accent.
+      const src = entry && entry.data && entry.data.source_analysis;
+      if (src && Array.isArray(src.dominant_colors) && src.dominant_colors.length) {
+        return src.dominant_colors.slice(0, 5);
+      }
+      return ['#f5c518', '#ffd966', '#888888', '#26262d', '#050509'];
+    }
+
+    function _applyMockupTextures(stage, buttons, panelEntry, checkboxEntry, progressEntry) {
+      // Panel border-image — pulled from the panel entry's 'normal' state.
+      if (panelEntry && panelEntry.data.variants && panelEntry.data.variants.normal) {
+        stage.style.setProperty('--mockup-panel', `url('${panelEntry.data.variants.normal}')`);
+      }
+      // Checkbox states.
+      if (checkboxEntry && checkboxEntry.data.variants) {
+        const v = checkboxEntry.data.variants;
+        if (v.unchecked) stage.style.setProperty('--mockup-check-unchecked', `url('${v.unchecked}')`);
+        if (v.checked)   stage.style.setProperty('--mockup-check-checked',   `url('${v.checked}')`);
+      }
+      // Progress bar — empty frame + full fill.
+      if (progressEntry && progressEntry.data.variants) {
+        const v = progressEntry.data.variants;
+        if (v.empty) stage.style.setProperty('--mockup-progress-empty', `url('${v.empty}')`);
+        if (v.full)  stage.style.setProperty('--mockup-progress-full',  `url('${v.full}')`);
+      }
+      // Pixel-art flag carries through from whichever entry is active.
+      const anyPixel = [buttons[0], panelEntry, checkboxEntry, progressEntry]
+        .filter(Boolean).some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+    }
+
+    // --- interaction playground --------------------------------------------
+    // "Open playground" launches a hands-on surface where the user can pick
+    // any session-history entry from chips at the bottom and interact with
+    // it full-size on a 16:9 stage. Buttons respond to hover/click, checkbox
+    // toggles, progress-bar gets a slider, panel is resizable. A size slider
+    // scales the widget via CSS transform. A state-readout below the stage
+    // updates live so you see "hover" / "pressed" as you interact.
+
+    // launcher for 'Open playground' removed per user request.
+    document.getElementById('btn-playground-back')?.addEventListener('click', () => show('results'));
+
+    const _pgSizeInput = document.getElementById('playground-size');
+    const _pgSizeValue = document.getElementById('playground-size-value');
+    _pgSizeInput.addEventListener('input', _updatePlaygroundSize);
+
+    function _updatePlaygroundSize() {
+      const scale = Number(_pgSizeInput.value) / 100;
+      const host = document.getElementById('playground-widget-host');
+      host.style.transform = `scale(${scale})`;
+      _pgSizeValue.textContent = scale.toFixed(2) + '\u00d7';
+    }
+
+    function openPlayground() {
+      const chipsEl = document.getElementById('playground-chips');
+      chipsEl.innerHTML = '';
+
+      if (sessionHistory.length === 0) {
+        document.getElementById('playground-widget-host').innerHTML = '';
+        chipsEl.innerHTML = '<div class="playground-empty">Nothing in session yet. Go back and generate a component, then come hang out here.</div>';
+        _setPlaygroundState('idle');
+        show('playground');
+        return;
+      }
+
+      // Pixel-art flag from any entry.
+      const anyPixel = sessionHistory.some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      // Chip per history entry — newest first.
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        const entry = sessionHistory[i];
+        const chip = document.createElement('button');
+        chip.className = 'playground-chip';
+        chip.dataset.historyId = entry.id;
+        chip.innerHTML = `
+          <div class="chip-thumb"><img src="${entry.source}" alt="${entry.label}" /></div>
+          <span class="chip-label">${entry.label}</span>
+        `;
+        chip.addEventListener('click', () => _renderPlaygroundEntry(entry));
+        chipsEl.appendChild(chip);
+      }
+
+      // Default: most recent entry.
+      _renderPlaygroundEntry(sessionHistory[sessionHistory.length - 1]);
+
+      // Reset size slider to 1x each time we enter.
+      _pgSizeInput.value = 100;
+      _updatePlaygroundSize();
+
+      show('playground');
+    }
+
+    function _renderPlaygroundEntry(entry) {
+      // Mark active chip.
+      document.querySelectorAll('.playground-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.historyId === entry.id);
+      });
+
+      const host = document.getElementById('playground-widget-host');
+      host.innerHTML = '';
+
+      const widget = _buildPlaygroundWidget(entry);
+      if (widget) host.appendChild(widget);
+      _wirePlaygroundStateReadout(widget, entry.type);
+      _setPlaygroundState('idle');
+    }
+
+    function _buildPlaygroundWidget(entry) {
+      const v = entry.data.variants || {};
+      switch (entry.type) {
+        case 'button': return _pgButton(v);
+        case 'checkbox': return _pgCheckbox(v);
+        case 'panel': return _pgPanel(v);
+        case 'progress_bar': return _pgProgress(v);
+        default: return null;
+      }
+    }
+
+    function _pgButton(v) {
+      const el = document.createElement('button');
+      el.className = 'pg-widget pg-button';
+      if (v.normal)   el.style.setProperty('--pg-normal',   `url('${v.normal}')`);
+      if (v.hover)    el.style.setProperty('--pg-hover',    `url('${v.hover}')`);
+      if (v.pressed)  el.style.setProperty('--pg-pressed',  `url('${v.pressed}')`);
+      if (v.disabled) el.style.setProperty('--pg-disabled', `url('${v.disabled}')`);
+      return el;
+    }
+
+    function _pgCheckbox(v) {
+      const el = document.createElement('button');
+      el.className = 'pg-widget pg-checkbox';
+      el.dataset.checked = 'false';
+      if (v.unchecked) el.style.setProperty('--pg-unchecked', `url('${v.unchecked}')`);
+      if (v.checked)   el.style.setProperty('--pg-checked',   `url('${v.checked}')`);
+      el.addEventListener('click', () => {
+        const next = el.dataset.checked === 'true' ? 'false' : 'true';
+        el.dataset.checked = next;
+        _setPlaygroundState(next === 'true' ? 'checked' : 'unchecked');
+      });
+      return el;
+    }
+
+    function _pgPanel(v) {
+      const el = document.createElement('div');
+      el.className = 'pg-widget pg-panel';
+      el.innerHTML = `
+        <div class="pg-panel-hint">drag bottom-right corner to resize</div>
+        <div style="margin-top: auto; color: var(--muted); font-size: 12px;">
+          9-slice frames stay crisp at any size. Give it a tug.
+        </div>
+      `;
+      if (v.normal) el.style.setProperty('--pg-panel', `url('${v.normal}')`);
+      return el;
+    }
+
+    function _pgProgress(v) {
+      const el = document.createElement('div');
+      el.className = 'pg-widget pg-progress';
+      el.innerHTML = `
+        <div class="pg-progress-bar"><div class="pg-progress-fill"></div></div>
+        <input type="range" min="0" max="100" value="50" />
+      `;
+      if (v.empty) el.style.setProperty('--pg-empty', `url('${v.empty}')`);
+      if (v.full)  el.style.setProperty('--pg-full',  `url('${v.full}')`);
+
+      const range = el.querySelector('input');
+      const setPct = (pct) => {
+        el.style.setProperty('--pg-progress', `${pct}%`);
+        _setPlaygroundState(`fill ${pct}%`);
+      };
+      setPct(50);
+      range.addEventListener('input', (e) => setPct(e.target.value));
+      return el;
+    }
+
+    function _wirePlaygroundStateReadout(widget, type) {
+      if (!widget) return;
+
+      if (type === 'button') {
+        widget.addEventListener('mouseenter', () => _setPlaygroundState('hover'));
+        widget.addEventListener('mouseleave', () => _setPlaygroundState('idle'));
+        widget.addEventListener('mousedown',  () => _setPlaygroundState('pressed'));
+        widget.addEventListener('mouseup',    () => _setPlaygroundState('hover'));
+        return;
+      }
+      if (type === 'panel') {
+        widget.addEventListener('mouseenter', () => _setPlaygroundState('hover'));
+        widget.addEventListener('mouseleave', () => _setPlaygroundState('idle'));
+        return;
+      }
+      // checkbox + progress_bar set their own state on interaction.
+    }
+
+    function _setPlaygroundState(label) {
+      const el = document.getElementById('playground-state');
+      if (el) el.textContent = label;
+    }
+
+    // --- compare slider (before/after reveal) ------------------------------
+    // Two session-history entries, layered on a stage, with a draggable
+    // vertical divider. Dragging reveals entry B by clipping it via
+    // `clip-path: inset(0 0 0 X%)` where X follows the pointer.
+
+    const _cmp = {
+      a: null,        // selected entry A
+      b: null,        // selected entry B
+      state: 'source',// which variant key to render (source / normal / ...)
+      split: 50,      // % — 0 = all B visible, 100 = all A visible
+    };
+
+    // launcher for 'Compare' removed per user request.
+    document.getElementById('btn-compare-back')?.addEventListener('click', () => show('results'));
+
+    function openCompare() {
+      const stageHost = document.getElementById('compare-stage-host');
+      stageHost.innerHTML = '';
+
+      if (sessionHistory.length < 2) {
+        stageHost.innerHTML = `
+          <div class="compare-empty">
+            Need at least two entries in session to compare.<br />
+            Head back and generate another component (or a variant) and return here.
+          </div>
+        `;
+        document.getElementById('compare-picker-row').style.display = 'none';
+        document.getElementById('compare-state-row').innerHTML = '';
+        show('compare');
+        return;
+      }
+
+      document.getElementById('compare-picker-row').style.display = '';
+
+      const anyPixel = sessionHistory.some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      // Populate A/B dropdowns, default A=most recent, B=second-most-recent.
+      const selA = document.getElementById('compare-a');
+      const selB = document.getElementById('compare-b');
+      selA.innerHTML = '';
+      selB.innerHTML = '';
+      // Build from newest to oldest.
+      const ordered = sessionHistory.slice().reverse();
+      for (const entry of ordered) {
+        const label = `${entry.label}`;
+        selA.appendChild(new Option(label, entry.id));
+        selB.appendChild(new Option(label, entry.id));
+      }
+      selA.value = ordered[0].id;
+      selB.value = ordered[1].id;
+      _cmp.a = ordered[0];
+      _cmp.b = ordered[1];
+      _cmp.split = 50;
+      _cmp.state = 'source';
+
+      selA.onchange = () => { _cmp.a = sessionHistory.find(e => e.id === selA.value); _renderCompare(); };
+      selB.onchange = () => { _cmp.b = sessionHistory.find(e => e.id === selB.value); _renderCompare(); };
+
+      _renderCompare();
+      show('compare');
+    }
+
+    function _renderCompare() {
+      const stageHost = document.getElementById('compare-stage-host');
+      stageHost.innerHTML = '';
+
+      const stage = document.createElement('div');
+      stage.className = 'compare-stage';
+      stage.innerHTML = `
+        <div class="compare-layer left"></div>
+        <div class="compare-layer right"></div>
+        <div class="compare-labels">
+          <span class="label">A · ${_cmp.a.label}</span>
+          <span class="label">B · ${_cmp.b.label}</span>
+        </div>
+        <div class="compare-divider"><span class="handle">&lsaquo;&rsaquo;</span></div>
+      `;
+
+      _setCompareImages(stage);
+      _setCompareSplit(stage, _cmp.split);
+      _wireCompareDrag(stage);
+
+      stageHost.appendChild(stage);
+      _renderCompareStateChips();
+    }
+
+    // Pick the URL for the selected state key. Falls back to source/normal if
+    // the state doesn't exist for that entry (e.g. A is a button with 'hover'
+    // but B is a checkbox with 'checked'/'unchecked' — in that case the chip
+    // state won't apply to B and we fall back).
+    function _urlForState(entry, stateKey) {
+      if (stateKey === 'source') return entry.source;
+      const v = entry.data.variants || {};
+      if (v[stateKey]) return v[stateKey];
+      // Fall back to normal for buttons, or whatever canonical state exists.
+      return v.normal || v.unchecked || v.empty || entry.source;
+    }
+
+    function _setCompareImages(stage) {
+      const urlA = _urlForState(_cmp.a, _cmp.state);
+      const urlB = _urlForState(_cmp.b, _cmp.state);
+      stage.style.setProperty('--compare-left',  `url('${urlA}')`);
+      stage.style.setProperty('--compare-right', `url('${urlB}')`);
+    }
+
+    function _setCompareSplit(stage, pct) {
+      const clamped = Math.max(0, Math.min(100, pct));
+      _cmp.split = clamped;
+      stage.style.setProperty('--compare-split', `${clamped}%`);
+    }
+
+    function _wireCompareDrag(stage) {
+      let dragging = false;
+      const getRel = (e) => {
+        const rect = stage.getBoundingClientRect();
+        const x = (e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? rect.left) - rect.left;
+        return (x / rect.width) * 100;
+      };
+      const onMove = (e) => {
+        if (!dragging) return;
+        _setCompareSplit(stage, getRel(e));
+        e.preventDefault();
+      };
+      const onUp = () => { dragging = false; document.body.style.cursor = ''; };
+      const onDown = (e) => {
+        dragging = true;
+        document.body.style.cursor = 'ew-resize';
+        _setCompareSplit(stage, getRel(e));
+        e.preventDefault();
+      };
+      stage.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      // Click anywhere on the stage jumps the divider there.
+    }
+
+    // State chips row — available states is the union of A and B variant keys.
+    function _renderCompareStateChips() {
+      const row = document.getElementById('compare-state-row');
+      row.innerHTML = '';
+      const keys = new Set(['source']);
+      for (const entry of [_cmp.a, _cmp.b]) {
+        for (const k of Object.keys(entry.data.variants || {})) keys.add(k);
+      }
+      // Canonical order.
+      const order = ['source','normal','hover','pressed','disabled','unchecked','checked','empty','full'];
+      const sorted = order.filter(k => keys.has(k)).concat([...keys].filter(k => !order.includes(k)));
+      for (const k of sorted) {
+        const chip = document.createElement('button');
+        chip.className = 'compare-state-chip' + (_cmp.state === k ? ' active' : '');
+        chip.textContent = k;
+        chip.addEventListener('click', () => {
+          _cmp.state = k;
+          _renderCompare();
+        });
+        row.appendChild(chip);
+      }
+    }
+
+    // --- kit poster (Canvas composite, shareable PNG) ---------------------
+    // Builds a 1600×900 PNG in the browser from sessionHistory. No DOM
+    // rasterization (which struggles with border-image / clip-path in our
+    // CSS); we draw tile images + text onto a raw <canvas> with layout math.
+
+    const POSTER_W = 1600;
+    const POSTER_H = 900;
+    const POSTER_PAD = 60;
+
+    document.getElementById('btn-poster').addEventListener('click', openPoster);
+    document.getElementById('btn-poster-back').addEventListener('click', () => show('results'));
+    document.getElementById('btn-poster-download').addEventListener('click', _downloadPoster);
+
+    async function openPoster() {
+      show('poster');
+      const host = document.getElementById('poster-stage-host');
+      const downloadBtn = document.getElementById('btn-poster-download');
+      const meta = document.getElementById('poster-meta');
+      downloadBtn.disabled = true;
+
+      if (sessionHistory.length === 0) {
+        host.innerHTML = `<div class="poster-empty">
+          Nothing in session yet. Generate a component, then come back.
+        </div>`;
+        meta.textContent = '—';
+        return;
+      }
+
+      host.innerHTML = `<div class="poster-loading">Composing the poster…</div>`;
+
+      // Load every entry's source image asynchronously before we start
+      // drawing — Canvas needs the Image elements ready.
+      const entries = sessionHistory.slice(-6).reverse(); // up to 6 most recent, newest first
+      const images = await Promise.all(entries.map(e => _loadImage(e.source)));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = POSTER_W;
+      canvas.height = POSTER_H;
+      const ctx = canvas.getContext('2d');
+      // Pixel-perfect tiles when any entry is pixel art.
+      const anyPixel = entries.some(e => e.data && e.data.is_pixel_art);
+      ctx.imageSmoothingEnabled = !anyPixel;
+
+      _drawPoster(ctx, entries, images, anyPixel);
+
+      host.innerHTML = '';
+      host.appendChild(canvas);
+
+      const sizeMb = Math.round((canvas.toDataURL('image/png').length * 0.75) / 1024 / 10.24) / 100;
+      meta.textContent = `${POSTER_W}×${POSTER_H}px · ~${sizeMb} MB · ${entries.length} component${entries.length === 1 ? '' : 's'}`;
+      downloadBtn.disabled = false;
+
+      // Stash the canvas for download.
+      window._posterCanvas = canvas;
+    }
+
+    function _loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('image load failed: ' + url.slice(0, 64)));
+        img.src = url;
+      });
+    }
+
+    function _drawPoster(ctx, entries, images, pixelArt) {
+      // Background — same dark gradient feel as the app.
+      const bg = ctx.createLinearGradient(0, 0, 0, POSTER_H);
+      bg.addColorStop(0, '#0f0f14');
+      bg.addColorStop(1, '#050509');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+      // Subtle accent radial glow near top.
+      const glow = ctx.createRadialGradient(POSTER_W / 2, 0, 0, POSTER_W / 2, 0, POSTER_W * 0.6);
+      glow.addColorStop(0, 'rgba(245, 197, 24, 0.08)');
+      glow.addColorStop(1, 'rgba(245, 197, 24, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+      // Title.
+      ctx.fillStyle = '#f5f5f7';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '700 56px Inter, system-ui, sans-serif';
+      ctx.fillText('BANANADOT KIT', POSTER_PAD, POSTER_PAD);
+
+      ctx.fillStyle = '#8b8b95';
+      ctx.font = '400 14px "JetBrains Mono", ui-monospace, monospace';
+      const date = new Date().toISOString().slice(0, 10);
+      ctx.fillText(`bananadot · ${date} · ${entries.length} component${entries.length === 1 ? '' : 's'}`,
+                   POSTER_PAD, POSTER_PAD + 68);
+
+      // Tile grid.
+      const gridTop = POSTER_PAD + 120;
+      const gridBottom = POSTER_H - POSTER_PAD - 80; // leave room for footer
+      const gridHeight = gridBottom - gridTop;
+      const gridWidth = POSTER_W - POSTER_PAD * 2;
+
+      const n = entries.length;
+      const cols = n <= 3 ? n : (n === 4 ? 4 : 3);
+      const rows = Math.ceil(n / cols);
+      const gap = 24;
+      const tileW = Math.floor((gridWidth - gap * (cols - 1)) / cols);
+      const tileH = Math.floor((gridHeight - gap * (rows - 1)) / rows);
+
+      for (let i = 0; i < n; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = POSTER_PAD + col * (tileW + gap);
+        const y = gridTop + row * (tileH + gap);
+        _drawTile(ctx, entries[i], images[i], x, y, tileW, tileH, pixelArt);
+      }
+
+      // Footer — palette swatches + tagline.
+      const footerY = POSTER_H - POSTER_PAD - 36;
+      const palette = _gatherPalette(entries);
+      const swatchSize = 28;
+      const swatchGap = 8;
+      palette.slice(0, 6).forEach((hex, i) => {
+        const sx = POSTER_PAD + i * (swatchSize + swatchGap);
+        ctx.fillStyle = hex;
+        ctx.fillRect(sx, footerY, swatchSize, swatchSize);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, footerY + 0.5, swatchSize - 1, swatchSize - 1);
+      });
+
+      ctx.fillStyle = '#5c5c66';
+      ctx.font = '400 12px "JetBrains Mono", ui-monospace, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('made with bananadot', POSTER_W - POSTER_PAD, footerY + 20);
+    }
+
+    function _drawTile(ctx, entry, img, x, y, w, h, pixelArt) {
+      // Checkerboard background for transparency readability.
+      const check = 16;
+      for (let cy = 0; cy < Math.ceil(h / check); cy++) {
+        for (let cx = 0; cx < Math.ceil(w / check); cx++) {
+          ctx.fillStyle = (cx + cy) % 2 === 0 ? '#101014' : '#16161c';
+          ctx.fillRect(x + cx * check, y + cy * check, Math.min(check, w - cx * check), Math.min(check, h - cy * check));
+        }
+      }
+
+      // Tile border.
+      ctx.strokeStyle = '#26262d';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+      // Draw image, fit-to-contain, centered. Leave room for label bar.
+      const labelH = 28;
+      const contentH = h - labelH;
+      const padding = 16;
+      const maxW = w - padding * 2;
+      const maxH = contentH - padding * 2;
+      const imgAspect = img.width / img.height;
+      let drawW = maxW;
+      let drawH = drawW / imgAspect;
+      if (drawH > maxH) { drawH = maxH; drawW = drawH * imgAspect; }
+      const ix = x + (w - drawW) / 2;
+      const iy = y + (contentH - drawH) / 2;
+
+      ctx.imageSmoothingEnabled = !pixelArt;
+      ctx.drawImage(img, ix, iy, drawW, drawH);
+
+      // Label bar at the bottom.
+      ctx.fillStyle = 'rgba(5, 5, 9, 0.92)';
+      ctx.fillRect(x, y + h - labelH, w, labelH);
+      ctx.fillStyle = '#8b8b95';
+      ctx.font = '500 11px "JetBrains Mono", ui-monospace, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(entry.label, x + 12, y + h - labelH / 2);
+    }
+
+    function _gatherPalette(entries) {
+      const seen = new Set();
+      const out = [];
+      for (const entry of entries) {
+        const sa = entry.data && entry.data.source_analysis;
+        if (sa && Array.isArray(sa.dominant_colors)) {
+          for (const hex of sa.dominant_colors) {
+            if (hex && !seen.has(hex.toLowerCase())) {
+              seen.add(hex.toLowerCase());
+              out.push(hex);
+              if (out.length >= 8) return out;
+            }
+          }
+        }
+      }
+      // Fallback accent-led palette.
+      if (out.length === 0) {
+        return ['#f5c518', '#ffd966', '#f5f5f7', '#888888', '#26262d', '#050509'];
+      }
+      return out;
+    }
+
+    function _downloadPoster() {
+      const canvas = window._posterCanvas;
+      if (!canvas) return;
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `bananadot_kit_${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+    }
+
+    // --- live demo: Banana Clicker ---------------------------------------
+    // Tiny playable microgame. The button is the user's generated button —
+    // click to score, health drains, game over when health hits 0. Pause
+    // checkbox uses the user's checkbox texture; score panel uses their
+    // panel texture; health bar uses their progress_bar textures. Any
+    // missing component falls back to CSS placeholder styling.
+
+    document.getElementById('btn-livedemo').addEventListener('click', openLiveDemo);
+    document.getElementById('btn-livedemo-back').addEventListener('click', _exitLiveDemo);
+
+    // Game state — re-initialised on each openLiveDemo() and resetLiveDemo().
+    const _ld = {
+      running: false,
+      paused: false,
+      score: 0,
+      health: 100,     // 0..100
+      lastTick: 0,
+      rafId: null,
+    };
+
+    function openLiveDemo() {
+      const host = document.getElementById('livedemo-stage-host');
+      host.innerHTML = '';
+
+      // Must have at least a button to play.
+      const btn = _latestHistory('button');
+      if (!btn) {
+        host.innerHTML = `<div class="livedemo-empty">
+          Banana Clicker needs a button to click. Head back, generate one,
+          and come back.
+        </div>`;
+        show('livedemo');
+        return;
+      }
+
+      const panel = _latestHistory('panel');
+      const checkbox = _latestHistory('checkbox');
+      const progress = _latestHistory('progress_bar');
+
+      const anyPixel = [btn, panel, checkbox, progress].filter(Boolean)
+        .some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
+
+      const stage = _buildLiveDemoStage(btn, panel, checkbox, progress);
+      host.appendChild(stage);
+      _startLiveDemo();
+      show('livedemo');
+    }
+
+    function _buildLiveDemoStage(btnEntry, panelEntry, checkboxEntry, progressEntry) {
+      const stage = document.createElement('div');
+      stage.className = 'livedemo-stage';
+      const btnHasPlaceholder = !btnEntry ? ' placeholder' : '';
+      const checkPlaceholder = !checkboxEntry ? ' placeholder' : '';
+      stage.innerHTML = `
+        <div class="livedemo-top">
+          <div class="livedemo-score">
+            <span class="score-label">score</span>
+            <span class="score-value" id="ld-score-value">0</span>
+          </div>
+          <label class="livedemo-pause-row">
+            <button id="ld-pause" class="livedemo-pause${checkPlaceholder}" data-checked="false" aria-label="Pause"></button>
+            <span>Pause</span>
+          </label>
+        </div>
+        <div class="livedemo-center">
+          <button id="ld-button" class="livedemo-button${btnHasPlaceholder}">
+            CLICK ME
+          </button>
+        </div>
+        <div class="livedemo-health-row">
+          <div class="livedemo-health-label">
+            <span>HP</span>
+            <span><span id="ld-health-value">100</span> / 100</span>
+          </div>
+          <div class="livedemo-health-bar"><div class="livedemo-health-fill"></div></div>
+        </div>
+        <div class="livedemo-overlay" id="ld-overlay">
+          <div>
+            <h2>Game over</h2>
+            <div class="final-score">final score: <span id="ld-final-score">0</span></div>
+            <button id="ld-play-again" class="btn btn-accent">Play again</button>
+          </div>
+        </div>
+      `;
+
+      // Texture wiring
+      if (btnEntry && btnEntry.data.variants) {
+        const v = btnEntry.data.variants;
+        if (v.normal)   stage.style.setProperty('--ld-btn-normal',   `url('${v.normal}')`);
+        if (v.hover)    stage.style.setProperty('--ld-btn-hover',    `url('${v.hover}')`);
+        if (v.pressed)  stage.style.setProperty('--ld-btn-pressed',  `url('${v.pressed}')`);
+        if (v.disabled) stage.style.setProperty('--ld-btn-disabled', `url('${v.disabled}')`);
+      }
+      if (panelEntry && panelEntry.data.variants && panelEntry.data.variants.normal) {
+        stage.style.setProperty('--ld-panel', `url('${panelEntry.data.variants.normal}')`);
+      }
+      if (checkboxEntry && checkboxEntry.data.variants) {
+        const v = checkboxEntry.data.variants;
+        if (v.unchecked) stage.style.setProperty('--ld-check-unchecked', `url('${v.unchecked}')`);
+        if (v.checked)   stage.style.setProperty('--ld-check-checked',   `url('${v.checked}')`);
+      }
+      if (progressEntry && progressEntry.data.variants) {
+        const v = progressEntry.data.variants;
+        if (v.empty) stage.style.setProperty('--ld-progress-empty', `url('${v.empty}')`);
+        if (v.full)  stage.style.setProperty('--ld-progress-full',  `url('${v.full}')`);
+      }
+
+      // Wire up event handlers after mount.
+      stage.querySelector('#ld-button').addEventListener('click', _handleClickScore);
+      stage.querySelector('#ld-pause').addEventListener('click', _togglePause);
+      stage.querySelector('#ld-play-again').addEventListener('click', _resetLiveDemo);
+
+      return stage;
+    }
+
+    function _startLiveDemo() {
+      _ld.running = true;
+      _ld.paused = false;
+      _ld.score = 0;
+      _ld.health = 100;
+      _ld.lastTick = performance.now();
+      _renderLiveDemoHUD();
+      _tickLiveDemo();
+    }
+
+    function _tickLiveDemo(now) {
+      if (!_ld.running) return;
+      now = now || performance.now();
+      const dt = Math.min(0.1, (now - _ld.lastTick) / 1000); // cap to 100ms to avoid huge drains after tab-away
+      _ld.lastTick = now;
+
+      if (!_ld.paused && _ld.health > 0) {
+        // Passive drain: ~3 HP/s — takes ~33s to lose without clicking.
+        _ld.health = Math.max(0, _ld.health - 3 * dt);
+        if (_ld.health <= 0) _gameOver();
+      }
+
+      _renderLiveDemoHUD();
+      _ld.rafId = requestAnimationFrame(_tickLiveDemo);
+    }
+
+    function _handleClickScore(e) {
+      if (!_ld.running || _ld.paused || _ld.health <= 0) return;
+      _ld.score += 1;
+      _ld.health = Math.max(0, _ld.health - 1.5); // each click costs a little
+      _spawnClickFX(e);
+      _renderLiveDemoHUD();
+      if (_ld.health <= 0) _gameOver();
+    }
+
+    function _spawnClickFX(e) {
+      const center = e.currentTarget.parentElement; // .livedemo-center
+      const rect = e.currentTarget.getBoundingClientRect();
+      const parentRect = center.getBoundingClientRect();
+      const fx = document.createElement('div');
+      fx.className = 'livedemo-click-fx';
+      fx.textContent = '+1';
+      fx.style.left = `${e.clientX - parentRect.left - 12}px`;
+      fx.style.top  = `${e.clientY - parentRect.top - 14}px`;
+      center.appendChild(fx);
+      setTimeout(() => fx.remove(), 950);
+    }
+
+    function _togglePause(e) {
+      const pauseBtn = e.currentTarget;
+      const nowPaused = pauseBtn.dataset.checked !== 'true';
+      pauseBtn.dataset.checked = String(nowPaused);
+      _ld.paused = nowPaused;
+      if (!nowPaused) _ld.lastTick = performance.now();
+    }
+
+    function _renderLiveDemoHUD() {
+      const scoreEl = document.getElementById('ld-score-value');
+      const healthEl = document.getElementById('ld-health-value');
+      if (scoreEl) scoreEl.textContent = _ld.score;
+      if (healthEl) healthEl.textContent = Math.ceil(_ld.health);
+      const stage = document.querySelector('.livedemo-stage');
+      if (stage) stage.style.setProperty('--ld-health', `${100 - _ld.health}%`);
+    }
+
+    function _gameOver() {
+      _ld.running = false;
+      if (_ld.rafId) cancelAnimationFrame(_ld.rafId);
+      const finalEl = document.getElementById('ld-final-score');
+      if (finalEl) finalEl.textContent = _ld.score;
+      const overlay = document.getElementById('ld-overlay');
+      if (overlay) overlay.classList.add('active');
+      const btn = document.getElementById('ld-button');
+      if (btn) btn.disabled = true;
+    }
+
+    function _resetLiveDemo() {
+      const overlay = document.getElementById('ld-overlay');
+      if (overlay) overlay.classList.remove('active');
+      const btn = document.getElementById('ld-button');
+      if (btn) btn.disabled = false;
+      const pauseBtn = document.getElementById('ld-pause');
+      if (pauseBtn) pauseBtn.dataset.checked = 'false';
+      _startLiveDemo();
+    }
+
+    function _exitLiveDemo() {
+      _ld.running = false;
+      if (_ld.rafId) cancelAnimationFrame(_ld.rafId);
+      show('results');
+    }
+
+    // --- "Recolor" palette remix -----------------------------------------
+    // Pick any session-history entry; sliders shift hue/saturation/brightness
+    // via CSS filter on a live preview. Save bakes the filter into Canvas
+    // and pushes a new entry into sessionHistory so the recolored variant
+    // shows up everywhere else (mockup / playground / compare / poster /
+    // livedemo).
+
+    const _remix = {
+      entry: null,
+      state: 'source',    // which variant key to preview; must exist on entry
+      hue: 0,             // 0..360
+      sat: 100,           // 0..200
+      bri: 100,           // 50..150
+    };
+
+    document.getElementById('btn-remix').addEventListener('click', openRemix);
+    document.getElementById('btn-remix-back').addEventListener('click', () => show('results'));
+
+    function openRemix() {
+      const body = document.getElementById('remix-body');
+      const chipsRow = document.getElementById('remix-state-chips');
+      body.innerHTML = '';
+      chipsRow.innerHTML = '';
+
+      if (sessionHistory.length === 0) {
+        body.innerHTML = `
+          <div class="remix-empty">
+            Nothing in session yet. Generate a component first, then come
+            back to shift its colours.
+          </div>
+        `;
+        show('remix');
+        return;
+      }
+
+      // Pick most-recent entry by default.
+      _remix.entry = sessionHistory[sessionHistory.length - 1];
+      _remix.state = 'source';
+      _remix.hue = 0; _remix.sat = 100; _remix.bri = 100;
+
+      // Pixel-art flag from selected entry.
+      document.body.classList.toggle('pixel-art', !!_remix.entry.data.is_pixel_art);
+
+      body.innerHTML = `
+        <div class="remix-layout">
+          <div class="remix-stage">
+            <img id="remix-preview" alt="recolor preview" />
+          </div>
+          <div class="remix-controls">
+            <div class="remix-picker">
+              <label for="remix-entry-select">Component</label>
+              <select id="remix-entry-select"></select>
+            </div>
+            <div class="remix-slider" data-axis="hue">
+              <div class="slider-head">
+                <span class="name">Hue rotate</span>
+                <span class="value" id="remix-hue-value">0°</span>
+              </div>
+              <input id="remix-hue" type="range" min="0" max="360" value="0" step="1" />
+            </div>
+            <div class="remix-slider" data-axis="sat">
+              <div class="slider-head">
+                <span class="name">Saturation</span>
+                <span class="value" id="remix-sat-value">100%</span>
+              </div>
+              <input id="remix-sat" type="range" min="0" max="200" value="100" step="1" />
+            </div>
+            <div class="remix-slider" data-axis="bri">
+              <div class="slider-head">
+                <span class="name">Brightness</span>
+                <span class="value" id="remix-bri-value">100%</span>
+              </div>
+              <input id="remix-bri" type="range" min="50" max="150" value="100" step="1" />
+            </div>
+            <div class="remix-actions">
+              <button id="btn-remix-save" class="btn btn-accent">Save as new variant</button>
+              <button id="btn-remix-reset" class="btn btn-ghost remix-reset">Reset</button>
+            </div>
+            <div class="remix-meta" id="remix-meta">&mdash;</div>
+          </div>
+        </div>
+      `;
+
+      // Populate entry picker (newest first).
+      const sel = body.querySelector('#remix-entry-select');
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        sel.appendChild(new Option(sessionHistory[i].label, sessionHistory[i].id));
+      }
+      sel.value = _remix.entry.id;
+      sel.addEventListener('change', () => {
+        _remix.entry = sessionHistory.find(e => e.id === sel.value);
+        _remix.state = 'source';
+        document.body.classList.toggle('pixel-art', !!_remix.entry.data.is_pixel_art);
+        _renderRemixStateChips();
+        _applyRemixPreview();
+      });
+
+      // Wire sliders.
+      const wire = (axis, id, suffix) => {
+        const input = body.querySelector(`#remix-${axis}`);
+        const readout = body.querySelector(`#remix-${axis}-value`);
+        input.addEventListener('input', () => {
+          _remix[axis] = Number(input.value);
+          readout.textContent = input.value + suffix;
+          _applyRemixPreview();
+        });
+      };
+      wire('hue', 'hue', '°');
+      wire('sat', 'sat', '%');
+      wire('bri', 'bri', '%');
+
+      body.querySelector('#btn-remix-save').addEventListener('click', _saveRemix);
+      body.querySelector('#btn-remix-reset').addEventListener('click', _resetRemix);
+
+      _renderRemixStateChips();
+      _applyRemixPreview();
+      show('remix');
+    }
+
+    function _renderRemixStateChips() {
+      const row = document.getElementById('remix-state-chips');
+      row.innerHTML = '';
+      const keys = ['source', ...Object.keys(_remix.entry.data.variants || {})];
+      // Canonical order.
+      const order = ['source','normal','hover','pressed','disabled','unchecked','checked','empty','full'];
+      const sorted = order.filter(k => keys.includes(k)).concat(keys.filter(k => !order.includes(k)));
+      for (const k of sorted) {
+        const chip = document.createElement('button');
+        chip.className = 'remix-state-chip' + (_remix.state === k ? ' active' : '');
+        chip.textContent = k;
+        chip.addEventListener('click', () => {
+          _remix.state = k;
+          _renderRemixStateChips();
+          _applyRemixPreview();
+        });
+        row.appendChild(chip);
+      }
+    }
+
+    function _remixFilterString() {
+      return `hue-rotate(${_remix.hue}deg) saturate(${_remix.sat}%) brightness(${_remix.bri}%)`;
+    }
+
+    function _remixCurrentUrl() {
+      const e = _remix.entry;
+      if (_remix.state === 'source') return e.source;
+      return (e.data.variants || {})[_remix.state] || e.source;
+    }
+
+    function _applyRemixPreview() {
+      const img = document.getElementById('remix-preview');
+      const meta = document.getElementById('remix-meta');
+      if (!img) return;
+      img.src = _remixCurrentUrl();
+      img.style.filter = _remixFilterString();
+      if (meta) {
+        const parts = [];
+        if (_remix.hue !== 0) parts.push(`${_remix.hue > 0 ? '+' : ''}${_remix.hue}°`);
+        if (_remix.sat !== 100) parts.push(`sat ${_remix.sat}%`);
+        if (_remix.bri !== 100) parts.push(`bri ${_remix.bri}%`);
+        meta.textContent = parts.length ? parts.join(' · ') : 'no changes yet — move a slider';
+      }
+    }
+
+    function _resetRemix() {
+      _remix.hue = 0; _remix.sat = 100; _remix.bri = 100;
+      document.getElementById('remix-hue').value = 0;
+      document.getElementById('remix-sat').value = 100;
+      document.getElementById('remix-bri').value = 100;
+      document.getElementById('remix-hue-value').textContent = '0°';
+      document.getElementById('remix-sat-value').textContent = '100%';
+      document.getElementById('remix-bri-value').textContent = '100%';
+      _applyRemixPreview();
+    }
+
+    // Bake current filters into new PNG data URLs for every variant key and
+    // push the result to sessionHistory as a new entry.
+    async function _saveRemix() {
+      const entry = _remix.entry;
+      if (!entry) return;
+      const btn = document.getElementById('btn-remix-save');
+      btn.disabled = true;
+      btn.textContent = 'Baking...';
+
+      const filter = _remixFilterString();
+      const newVariants = {};
+      try {
+        for (const [state, url] of Object.entries(entry.data.variants || {})) {
+          newVariants[state] = await _applyFilterToUrl(url, filter);
+        }
+        const newSource = await _applyFilterToUrl(entry.source, filter);
+
+        // Build a new entry mimicking the /preview response shape so the
+        // downstream features (mockup/playground/compare/poster/livedemo)
+        // all just work.
+        const newData = {
+          component_type: entry.data.component_type,
+          is_pixel_art: entry.data.is_pixel_art,
+          source: newSource,
+          source_analysis: entry.data.source_analysis,
+          variants: newVariants,
+          zip_base64: entry.data.zip_base64 || '',
+          zip_name: entry.data.zip_name || `bananadot_${entry.data.component_type}_remix.zip`,
+        };
+
+        // Derive a File from the new source so variant/refine/downstream
+        // flows can re-POST it like any other history entry.
+        const newFile = dataUrlToFile(newSource, `remix_${Date.now()}.png`);
+        const label = _remixLabel(entry);
+        pushHistory(newFile, entry.data.component_type, newData, label);
+
+        btn.textContent = 'Saved to history ✓';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Save as new variant';
+        }, 1600);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Save as new variant';
+        showError('Remix save failed: ' + (err.message || err));
+      }
+    }
+
+    function _applyFilterToUrl(dataUrl, filter) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = !_remix.entry.data.is_pixel_art;
+          ctx.filter = filter;
+          ctx.drawImage(img, 0, 0);
+          try {
+            resolve(canvas.toDataURL('image/png'));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    function _remixLabel(baseEntry) {
+      const parts = [];
+      if (_remix.hue !== 0) parts.push(`${_remix.hue > 0 ? '+' : ''}${_remix.hue}°`);
+      if (_remix.sat !== 100) parts.push(`sat ${_remix.sat}%`);
+      if (_remix.bri !== 100) parts.push(`bri ${_remix.bri}%`);
+      const tag = parts.length ? parts.join(' ') : 'no-op';
+      return `${baseEntry.data.component_type} · remix ${tag}`.slice(0, 60);
+    }
   </script>
 </body>
 </html>

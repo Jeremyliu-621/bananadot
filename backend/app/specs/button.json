@@ -29,8 +29,8 @@
 
   "states": {
     "normal": {
-      "passthrough": true,
-      "description": "Use the source image directly as the normal state."
+      "description": "Canonical resting state — reproduce the button exactly as shown in the source: same silhouette, same colors, same style, same level of detail. No state-specific modifications. This is the baseline against which hover/pressed/disabled are defined.",
+      "modifications": {}
     },
     "hover": {
       "description": "Hover state: slightly brighter overall, subtle raised-highlight feel.",

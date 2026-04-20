@@ -20,8 +20,8 @@
 
   "states": {
     "normal": {
-      "passthrough": true,
-      "description": "Use the source image directly."
+      "description": "Canonical resting state — reproduce the panel exactly as shown in the source: same silhouette, same colors, same style, same edge treatment. No state-specific modifications.",
+      "modifications": {}
     }
   },
 

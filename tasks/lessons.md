@@ -43,6 +43,90 @@ WHEN TO PRUNE
 
 _Newest first. Format: `### Title (YYYY-MM-DD)` then the rule + Why + How it applies._
 
+### SSE for long Gemini operations, not polling or fake progress (2026-04-20)
+
+`/kit` and `/variant/options` return `StreamingResponse` with media type
+`text/event-stream`, yielding newline-terminated `data: {json}\n\n`
+frames. The async generator does the actual Gemini calls via
+`asyncio.to_thread(blocking_fn, ...)` so the event loop stays free to
+flush events out to the browser between component/option completions.
+Frontend reads via `fetch()` + a generic `parseSSE(res, cb)` helper that
+walks the `ReadableStream` — NOT `EventSource`, because that only does
+GET requests and we need multipart POST.
+
+**Why:** Kit generation is 3 components × ~4 states each = up to 12
+Gemini calls, wall time ~60–90 s. Without real progress the UI feels
+broken. Polling would need a task_id/session mechanism. SSE is one
+long-lived response, dead simple. `asyncio.to_thread` is the seam
+between FastAPI's async world and the sync google-genai SDK.
+
+**How it applies:** Any future long-running endpoint (multi-step Gemini
+work, batch jobs) should follow the same shape — `AsyncIterator[bytes]`
+generator, `_sse(event, data)` helper, `asyncio.to_thread` for sync
+libraries. Keep events small and idempotent on the UI side.
+
+### Three reference images with role separation (2026-04-20)
+
+`generate._call_nano_banana` now takes 1, 2, or 3 reference images,
+always in the same positional order:
+  1. SOURCE (always) — STYLE_AND_SUBJECT_REFERENCE
+  2. CONSISTENCY_ANCHOR (after the first state of a run) — match
+     dimensions/rendering exactly
+  3. STYLE_FAMILY_REFERENCE (kit generation only) — match art style
+     but NOT shape/subject
+
+Each image's role gets an explicit `use_for` / `must_not_extract` list
+in the JSON prompt payload so Gemini doesn't leak one role into
+another.
+
+**Why:** The critical split for kit generation is "copy the look, not
+the shape." Without explicit `must_not_extract: [silhouette,
+subject_content, dimensions]` on image_3, Gemini will copy the
+reference button's shape into the generated checkbox.
+
+**How it applies:** When adding a fourth reference image (unlikely but
+possible), extend `_collect_image_refs` rather than adding ad-hoc
+slots. The positional contract (1=source, 2=anchor, 3=family) is what
+the prompt preamble relies on.
+
+### Revert-the-revert preferred over rebase/restart for short-lived branch divergence (2026-04-20)
+
+When kit-batch (forked from demo-both, which had the "normal is
+special" revert) needed the :8001 behavior (no passthrough), we used
+`git revert 79ac3fe` on kit-batch rather than rebasing or restarting.
+
+**Why:** Option 1 produces one clear undo-of-the-undo commit in 10
+seconds. Options 2–4 (rebase, restart, merge) give cleaner history
+only at the cost of minutes of re-setup — not worth it when the
+branch has almost no committed work yet. Also: squash-merge at final
+integration time erases the "revert of revert" noise anyway.
+
+**How it applies:** When a feature branch needs the inverse of a revert
+that already happened on its base, reach for `git revert <revert-sha>`
+first. Reserve rebase/restart for long-lived branches where the
+history will be consumed by humans browsing it.
+
+### uvicorn --reload on Windows is unreliable; hard-kill on mismatch (2026-04-20)
+
+When routes or imports behave unexpectedly after an edit, the running
+uvicorn is probably stale. WatchFiles occasionally misses rapid
+successive saves on Windows and leaves a worker on old bytecode.
+
+**Symptom:** `curl /openapi.json | jq '.paths'` omits a newly-added
+route; `python -c "from app.main import app; print(app.routes)"` shows
+it fine. The direct import uses the current file; the server is running
+an older one.
+
+**Fix:** hard-kill the port owner and restart:
+```
+powershell "Get-NetTCPConnection -LocalPort 8002 -State Listen | Select -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }"
+```
+Then `uvicorn app.main:app --host 127.0.0.1 --port 8002 --reload` again.
+
+**How it applies:** Trust `--reload` for style-only edits. For route
+additions or signature changes, always verify via `/openapi.json`
+before assuming the live server is current. If suspicious, hard-kill.
+
 ### Component metadata is duplicated in two places on purpose (2026-04-16)
 
 `generate.STATE_INSTRUCTIONS` (prompt per state per component) and

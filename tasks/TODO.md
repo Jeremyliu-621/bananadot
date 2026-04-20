@@ -1,84 +1,52 @@
 # Tasks
 
-<!--
-HOW TO USE THIS FILE
-====================
-Active plan for the current initiative. One TODO.md at a time — don't spawn
-parallel plans. When an initiative wraps, move this file to
-tasks/archive/YYYY-MM-DD-<name>.md and start a fresh TODO.md for the next one.
+## Current initiative: "Recolor" palette remix
 
-STATUS MARKERS
-- [ ]  todo
-- [~]  in progress (only one at a time)
-- [x]  done
-- [?]  blocked — next line explains why
+**Goal:** A new "Recolor" button on the results page opens a live
+color-shift tool. Pick any session-history entry; three sliders
+(hue / saturation / brightness) apply CSS filters to the preview in
+real time. On save, the filters bake into fresh PNG data URLs for
+every state variant via Canvas 2D `ctx.filter`, and the recolored
+variant is pushed to session history as a new entry.
 
-THE `<!-- resume here -->` MARKER
-- Exactly one in the file, always.
-- It points at the very next action you'd take if the session ended right now.
-- First thing to read when resuming work in a new session — jump straight to it.
-- Move it every time you finish a step. Stale resume markers are worse than none.
+Creative iteration without another Gemini round-trip. Great for
+exploring "what if this button were teal instead of green?" in 3
+seconds instead of 30.
 
-WHEN TO UPDATE
-- Before starting: skim the plan, confirm it still matches reality.
-- After each meaningful step: tick the box, move `<!-- resume here -->`.
-- On blocker: flip to [?], note the blocker on the next line, move resume
-  marker to whatever unblocks it.
-- On user correction: fix the plan AND consider whether MEMORY.md needs
-  an entry for the lesson.
+**Started:** 2026-04-20 (tick 7 of /loop 2h)
+**Base branch:** `worktree-livedemo` (commit `6013e3e`)
+**Author:** `Jeremyliu-621 <jeremyliu621@gmail.com>`
 
-WHEN TO START A NEW PLAN
-- Current initiative is done (archive this file first).
-- Scope pivots enough that the existing checklist is stale.
-- Never "just rewrite" an active plan silently — either archive or explicitly
-  supersede with a note.
+### Why Canvas filter works
 
-KEEP IT SHORT
-- If a step has 3+ sub-steps, break it out as its own plan or sub-list.
-- Delete finished sections you don't need to reference anymore; git has history.
--->
-
-## Current initiative: v0 end-to-end pipeline
-
-**Goal:** Drop a cropped UI-element image in, get back a Godot component zip that works. Prove the loop, then wrap in a web UI.
-**Started:** 2026-04-16
+`ctx.filter` accepts CSS filter strings in modern browsers. We load
+each state image, `ctx.filter = "hue-rotate(...) saturate(...) ..."`,
+`ctx.drawImage()`, `canvas.toDataURL('image/png')`. The filters bake
+in — the output is a regular PNG with the shifted colors. Reliable
+across Firefox, Chrome, Safari, Edge.
 
 ### Plan
 
-**Phase 1 — backend pipeline (callable by HTTP, no UI yet)**
+- [x] Spawn worktree `remix` from livedemo tip
+- [x] Boot server on :8009
+- [x] CSS: remix-section, remix-stage, remix-layout grid, sliders,
+  actions, state chips, empty state, launcher.
+- [x] HTML: launcher + `step-remix` with header + body host (built by
+  JS so empty state is easy) + state-chip row.
+- [x] JS: `openRemix()` populates entry picker and sliders; live
+  preview uses inline `style.filter`. State chips let user preview on
+  any specific variant key. `_saveRemix()` bakes filters into all
+  variant keys via Canvas 2D `ctx.filter` + `toDataURL`, pushes a new
+  sessionHistory entry with a filter-readout label.
+- [x] Empty-state when sessionHistory is empty.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8009 — upload any
+  component, click Recolor, drag the hue slider, hit Save, go back to
+  results, confirm the new remix entry appears in the session strip
+  and in the mockup/playground/etc views.
 
-- [x] Scaffold Python backend: `pyproject.toml`, FastAPI skeleton, env config, stubbed pipeline modules
-- [x] `pipeline/generate.py` — call Nano Banana with reference image + state instruction; return PNG bytes per requested state
-- [x] `pipeline/cleanup.py` — alpha-bbox trim, size-align all variants, detect-if-pixel-art + palette snap + nearest-neighbour downsample when true
-- [x] `pipeline/godot.py` — emit `example.tscn`, `README.md` from a template, drop PNGs alongside. (Swapped plan: TextureButton instead of Theme+StyleBoxTexture for v1 — drops in with zero import ceremony. Theme can return when we add 9-slice panels.)
-- [x] `pipeline/bundle.py` — zip the output folder
-- [x] Wire `/generate` endpoint: accept image + component type → run pipeline → return zip
-- [x] Offline chain verified with synthetic inputs (cleanup → godot → bundle)
-- [x] Extend `pipeline/godot.py` beyond button: per-component `_SPECS` registry → `NinePatchRect` (panel), `TextureButton` w/ `toggle_mode` (checkbox), `TextureProgressBar` (progress bar). README + `.tscn` templates per type. Offline smoke-tested all four emissions (example.tscn + zip) 2026-04-16.
-- [x] Frontend — enable panel / checkbox / progress_bar radios, dynamic variants grid from response's state keys, component-specific live-preview widgets (CSS `border-image` 9-slice panel, toggleable checkbox, range-driven progress fill), install-step copy swaps node type + asset paths per component.
-- [~] Smoke test with a real pixel-art button and one flat-vector button. Inspect outputs by eye, drop zip in a Godot project, verify hover/press. Now also need to eyeball a panel, a checkbox, and a progress bar going through Nano Banana end-to-end.
-
-**Phase 2 — web UI (demo surface)**
-
-- [ ] Next.js + shadcn + Tailwind skeleton in `frontend/`
-- [ ] Upload page: drag-drop, component-type dropdown, generate button
-- [ ] Call backend, show loading, render preview grid (original | normal | hover | pressed | disabled)
-- [ ] Download-zip button
-
-**Phase 3 — polish for the demo**
-
-- [ ] Live CSS mock of the Godot component so they see it "work" in-browser before download
-- [ ] Error + loading states
-- [ ] Style pass (ChatForce look, or neutral-clean if no brand guide handed over)
-
-### Open items (not blocking)
-
-- Which art styles to stress-test on in step 7 of Phase 1. I'll grab one pixel-art and one clean-vector from free asset sites unless Jeremy hands me specific inputs.
-- Exact Gemini model id — starting with `gemini-3-pro-image` per the Nov announcement; if the Nano Banana 2 unified endpoint is live by the time we call, swap it.
-
-<!-- resume here: real-image smoke test, now across all four component types. Boot backend (`cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app --reload`), open `/` for the web UI, and run one image through each radio: button (pixel-art + vector), panel (a frame/bg sprite), checkbox (box/square), progress bar (horizontal pill). For each: verify the live preview animates correctly in-browser, download the zip, drop into a Godot 4 project, open `example.tscn`, run F6. If a component's generations look bad, log the raw Nano Banana output BEFORE cleanup (in generate.py) to separate model drift from pipeline bugs. -->
+<!-- resume here: user smoke-test on :8009 when awake. Polish knobs if he wants more: (1) preset chip row (warm / cool / mono / inverse / pastel), (2) per-color swap (click a dominant-color swatch → picker opens → per-pixel remap via canvas pixel iteration for pixel-art entries), (3) hue/sat animated over time as a looping showcase, (4) Ctrl+Z / Ctrl+Shift+Z to step through slider changes. -->
 
 ### Review
 
-_Filled in when the initiative closes: what shipped, what surprised us,
-what belongs in MEMORY.md, what to archive._
+_Filled in when recolor commits a new variant that shows up in history._
