@@ -436,6 +436,111 @@
       display: flex; justify-content: flex-end;
     }
 
+    /* "Try it" row inside each kit-member card — interactive widget */
+    .kit-try-row {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 14px;
+      padding: 14px 0 16px;
+      border-top: 1px dashed var(--line);
+      margin: 12px 0 12px;
+      align-items: center;
+    }
+    .kit-try-row .kit-try-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .kit-try-row .kit-try-stage {
+      background: repeating-conic-gradient(#101014 0% 25%, #16161c 0% 50%) 50% / 12px 12px;
+      border: 1px solid var(--line);
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 18px;
+      min-height: 100px;
+      flex-wrap: wrap;
+    }
+
+    .kt-btn {
+      width: 160px; height: 56px;
+      background: transparent;
+      background-image: var(--kt-btn-normal, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none; padding: 0; cursor: pointer;
+      transition: transform 0.05s;
+    }
+    .kt-btn:hover    { background-image: var(--kt-btn-hover, var(--kt-btn-normal, none)); }
+    .kt-btn:active   { background-image: var(--kt-btn-pressed, var(--kt-btn-normal, none)); transform: translateY(1px); }
+    .kt-btn:disabled { background-image: var(--kt-btn-disabled, var(--kt-btn-normal, none)); cursor: not-allowed; opacity: 0.7; }
+    .pixel-art .kt-btn { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-check {
+      width: 56px; height: 56px;
+      background: transparent;
+      background-image: var(--kt-check-unchecked, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: none; padding: 0; cursor: pointer;
+    }
+    .kt-check[data-checked="true"] { background-image: var(--kt-check-checked, none); }
+    .pixel-art .kt-check { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-panel {
+      width: 260px; min-height: 80px;
+      resize: horizontal;
+      overflow: hidden;
+      padding: 14px 18px;
+      background-color: rgba(16,16,20,0.6);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--kt-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: ew-resize;
+    }
+    .pixel-art .kt-panel { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    .kt-progress { display: flex; flex-direction: column; gap: 8px; width: 240px; }
+    .kt-progress .kt-progress-bar {
+      position: relative;
+      height: 22px;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--kt-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .kt-progress .kt-progress-fill {
+      position: absolute; inset: 0;
+      background-image: var(--kt-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 calc(100% - var(--kt-progress-pct, 50%)) 0 0);
+      transition: clip-path 0.1s linear;
+    }
+    .kt-progress input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .pixel-art .kt-progress .kt-progress-bar,
+    .pixel-art .kt-progress .kt-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .kt-ctrl-row {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .kt-ctrl-row input[type="checkbox"] { accent-color: var(--accent); }
+
     /* Session history — thumbnails of past generations in this session */
     .session-history {
       margin-bottom: 32px;
@@ -2671,12 +2776,23 @@
             </div>
           `).join('')}
         </div>
+
+        <div class="kit-try-row">
+          <div class="kit-try-label">try it</div>
+          <div class="kit-try-stage" data-component="${data.component}"></div>
+        </div>
+
         <div class="kit-member-download">
           <button class="btn btn-ghost btn-download-kit" data-zip-b64="${data.zip_base64}" data-zip-name="${data.zip_name}">
             Download ${data.component} zip
           </button>
         </div>
       `;
+
+      // Build the interactive widget inside the stage based on component type.
+      const stage = card.querySelector('.kit-try-stage');
+      _buildKitTryWidget(stage, data);
+
       card.querySelector('.btn-download-kit').addEventListener('click', (e) => {
         const btn = e.currentTarget;
         const bytes = Uint8Array.from(atob(btn.dataset.zipB64), c => c.charCodeAt(0));
@@ -2688,6 +2804,74 @@
         URL.revokeObjectURL(a.href);
       });
       members.appendChild(card);
+    }
+
+    // Build a small interactive widget matching the component type, attach it
+    // to the stage element. Uses the kit-member's own data.variants to drive
+    // CSS custom properties on the stage so textures are scoped per member.
+    function _buildKitTryWidget(stage, data) {
+      const v = data.variants || {};
+      switch (data.component) {
+        case 'button':       _buildKtButton(stage, v);    break;
+        case 'panel':        _buildKtPanel(stage, v);     break;
+        case 'checkbox':     _buildKtCheckbox(stage, v);  break;
+        case 'progress_bar': _buildKtProgress(stage, v);  break;
+        default:
+          stage.innerHTML = `<span class="kt-ctrl-row">no interactive preview for ${data.component}</span>`;
+      }
+    }
+
+    function _buildKtButton(stage, v) {
+      if (v.normal)   stage.style.setProperty('--kt-btn-normal',   `url('${v.normal}')`);
+      if (v.hover)    stage.style.setProperty('--kt-btn-hover',    `url('${v.hover}')`);
+      if (v.pressed)  stage.style.setProperty('--kt-btn-pressed',  `url('${v.pressed}')`);
+      if (v.disabled) stage.style.setProperty('--kt-btn-disabled', `url('${v.disabled}')`);
+      stage.innerHTML = `
+        <button class="kt-btn" aria-label="try button"></button>
+        <label class="kt-ctrl-row">
+          <input type="checkbox" />
+          disabled
+        </label>
+      `;
+      const btn = stage.querySelector('.kt-btn');
+      const disabledChk = stage.querySelector('input[type="checkbox"]');
+      disabledChk.addEventListener('change', () => { btn.disabled = disabledChk.checked; });
+    }
+
+    function _buildKtCheckbox(stage, v) {
+      if (v.unchecked) stage.style.setProperty('--kt-check-unchecked', `url('${v.unchecked}')`);
+      if (v.checked)   stage.style.setProperty('--kt-check-checked',   `url('${v.checked}')`);
+      stage.innerHTML = `
+        <button class="kt-check" data-checked="false" aria-label="try checkbox"></button>
+        <span class="kt-ctrl-row">click to toggle</span>
+      `;
+      const cb = stage.querySelector('.kt-check');
+      cb.addEventListener('click', () => {
+        cb.dataset.checked = cb.dataset.checked === 'true' ? 'false' : 'true';
+      });
+    }
+
+    function _buildKtPanel(stage, v) {
+      if (v.normal) stage.style.setProperty('--kt-panel', `url('${v.normal}')`);
+      stage.innerHTML = `
+        <div class="kt-panel">drag right edge to resize</div>
+        <span class="kt-ctrl-row">9-slice frame stays crisp</span>
+      `;
+    }
+
+    function _buildKtProgress(stage, v) {
+      if (v.empty) stage.style.setProperty('--kt-progress-empty', `url('${v.empty}')`);
+      if (v.full)  stage.style.setProperty('--kt-progress-full',  `url('${v.full}')`);
+      stage.innerHTML = `
+        <div class="kt-progress">
+          <div class="kt-progress-bar"><div class="kt-progress-fill"></div></div>
+          <input type="range" min="0" max="100" value="50" aria-label="fill" />
+        </div>
+      `;
+      const range = stage.querySelector('input[type="range"]');
+      const setPct = (p) => stage.querySelector('.kt-progress').style.setProperty('--kt-progress-pct', `${p}%`);
+      setPct(50);
+      range.addEventListener('input', (e) => setPct(e.target.value));
     }
 
     // --- mockup scene: "See in a game screen" -------------------------------
