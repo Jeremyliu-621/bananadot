@@ -42,22 +42,23 @@ libraries. Reliable across browsers.
 
 - [x] Spawn `poster` worktree from compare tip
 - [x] Boot server on :8007
-- [ ] CSS for the poster step (preview + download button)
-- [ ] HTML: launcher on results + `step-poster` with a `<canvas>` host
-- [ ] JS: `openPoster()` builds the canvas asynchronously (loads each
-  history entry's source data URL into an `Image`, draws with layout
-  math). Shows canvas inline + a "Download PNG" button. "Back" returns
-  to results.
-- [ ] Layout math: dynamic grid (1–6 tiles). Tile size scales to fit.
-  Checkerboard behind each tile matches the rest of the app.
-- [ ] Palette swatches from the most-recent entry's
-  `source_analysis.dominant_colors` (or first five from all entries
-  combined).
-- [ ] Test at :8007 — upload 2–3 components, click Export kit poster,
-  confirm canvas renders + download works.
-- [ ] Commit under Jeremy.
+- [x] CSS: poster-section, poster-stage, poster-actions, launcher
+- [x] HTML: launcher + `step-poster` with canvas host + download button
+- [x] JS: `openPoster()` loads all history images, draws title +
+  subtitle + tile grid + palette swatches + footer on a 1600×900
+  canvas. `_drawTile` renders checkerboard + image + label per entry.
+- [x] Grid math: auto-picks cols based on N entries (≤3 = one row,
+  4 = 4 cols, 5–6 = 3×2).
+- [x] Palette from `source_analysis.dominant_colors`, deduped.
+- [x] Pixel-art rendering preserved: imageSmoothingEnabled toggles per
+  entry.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8007 — upload 2–3
+  components (or a kit), click Export kit poster, see the canvas
+  preview, click Download PNG, confirm the file opens with all tiles
+  visible.
 
-<!-- resume here: write the openPoster / _drawPoster / _downloadPoster JS. Canvas is 1600×900, 60px padding. Title uses Inter 48 weight 700, subtitle Inter 14 weight 400. Tiles: 3-column grid if <=3 entries, 4-column if 4, 3×2 if 5-6. -->
+<!-- resume here: user smoke-test on :8007 when awake. If the poster looks good, cherry-pick f613ca7 into kit-batch. Polish knobs: (1) choose between multiple layout styles (landscape vs portrait vs grid-only), (2) add the user's source image as a hero at the top, (3) show ALL history entries (not just 6 most-recent) with auto-pagination if more than 6. -->
 
 ### Review
 
