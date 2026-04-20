@@ -59,18 +59,20 @@ checkbox in matching style.
 
 - [x] Spawn worktree `compare` from playground tip
 - [x] Boot server on :8006
-- [ ] CSS for compare stage, layers, divider, state chips
-- [ ] HTML: launcher button on results + new `step-compare` section
-- [ ] JS: `openCompare()` populates A/B dropdowns from sessionHistory,
-  defaults A=most recent, B=second-most-recent. `renderCompareStage()`
-  paints current state. Pointer drag on divider updates position.
-  State chips re-render with selected state.
-- [ ] Empty-state: fewer than 2 history entries → message.
-- [ ] Commit each chunk under Jeremy.
-- [ ] Verify at :8006 — generate 2 components (or a component + a
-  variant), click Compare, drag divider, switch state chip.
+- [x] CSS: stage, layers, divider+handle, A/B labels, state chips
+- [x] HTML: launcher button on results + `step-compare` section with
+  A/B dropdowns, stage host, state-chip row
+- [x] JS: `openCompare()` populates A/B, renders stage; pointer drag
+  on stage updates the split via CSS custom property; state chips
+  re-render from the union of A and B variant keys with graceful
+  fallback.
+- [x] Empty state when <2 history entries.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8006 — generate 2
+  components (or a variant), click Compare, drag divider, switch
+  state chips, confirm both sides render.
 
-<!-- resume here: write CSS for .compare-stage with two layered images and the divider. Use CSS custom props so JS just sets --compare-left / --compare-right / --compare-split (a percentage). -->
+<!-- resume here: user smoke-test on :8006 when awake. If the compare slider feels good, cherry-pick c01fb04 into kit-batch. Polish knobs if he wants more: (1) keyboard arrows to nudge the split ±5%, (2) a lil "swap A/B" button, (3) zoom into the stage via wheel / pinch. -->
 
 ### Review
 
