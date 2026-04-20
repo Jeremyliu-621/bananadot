@@ -1474,6 +1474,128 @@
       color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
     }
 
+    /* --- "Recolor" palette remix ---------------------------------------- */
+
+    .remix-section { padding: 24px 0 40px; min-height: 100vh; }
+    .remix-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+    .remix-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    @media (max-width: 760px) {
+      .remix-layout { grid-template-columns: 1fr; }
+    }
+
+    .remix-stage {
+      position: relative;
+      aspect-ratio: 1;
+      min-height: 360px;
+      background: repeating-conic-gradient(#101014 0% 25%, #16161c 0% 50%) 50% / 18px 18px;
+      border: 1px solid var(--line-strong);
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+    .remix-stage img {
+      max-width: 80%;
+      max-height: 80%;
+      display: block;
+      transition: filter 0.12s linear;
+    }
+    .pixel-art .remix-stage img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .remix-controls { display: flex; flex-direction: column; gap: 18px; }
+    .remix-picker label, .remix-slider label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+    .remix-picker select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit; outline: none;
+    }
+    .remix-picker select:focus { border-color: var(--accent); }
+
+    .remix-slider .slider-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .remix-slider .slider-head .name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .remix-slider .slider-head .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--accent);
+      font-weight: 500;
+    }
+    .remix-slider input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .remix-actions {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .remix-reset { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .remix-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .remix-state-chips {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      max-width: 1000px; margin: 14px auto 0;
+    }
+    .remix-state-chip {
+      padding: 6px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+    .remix-state-chip:hover { color: var(--fg); border-color: var(--muted); }
+    .remix-state-chip.active {
+      background: rgba(245, 197, 24, 0.08);
+      color: var(--accent); border-color: var(--accent);
+    }
+
+    .remix-empty {
+      max-width: 1000px; margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .remix-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .remix-launcher-section .launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -1723,6 +1845,37 @@
         </div>
       </div>
 
+      <div class="remix-launcher-section">
+        <div class="eyebrow">recolor</div>
+        <div class="launcher-intro">
+          Shift hue, saturation, or brightness on any session component in
+          real time. Happy with the result? Save it as a new variant. No
+          Gemini call &mdash; just fast creative iteration.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-remix" class="btn btn-accent">Recolor</button>
+          <span class="variant-hint mono">live preview &middot; save bakes filters into fresh PNGs</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- remix / recolor scene -->
+    <section id="step-remix" class="step remix-section">
+      <div class="remix-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="btn-remix-back" class="btn btn-ghost">&larr; Back to results</button>
+          <span class="eyebrow">recolor &middot; palette remix</span>
+        </div>
+      </div>
+
+      <div id="remix-body">
+        <!-- populated by openRemix(); either layout + controls, or empty state -->
+      </div>
+
+      <div class="remix-state-chips" id="remix-state-chips">
+        <!-- state chips per available variant key -->
+      </div>
     </section>
 
     <!-- live demo scene -->
@@ -1879,7 +2032,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster', 'livedemo'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup', 'playground', 'compare', 'poster', 'livedemo', 'remix'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -3571,6 +3724,260 @@
       _ld.running = false;
       if (_ld.rafId) cancelAnimationFrame(_ld.rafId);
       show('results');
+    }
+
+    // --- "Recolor" palette remix -----------------------------------------
+    // Pick any session-history entry; sliders shift hue/saturation/brightness
+    // via CSS filter on a live preview. Save bakes the filter into Canvas
+    // and pushes a new entry into sessionHistory so the recolored variant
+    // shows up everywhere else (mockup / playground / compare / poster /
+    // livedemo).
+
+    const _remix = {
+      entry: null,
+      state: 'source',    // which variant key to preview; must exist on entry
+      hue: 0,             // 0..360
+      sat: 100,           // 0..200
+      bri: 100,           // 50..150
+    };
+
+    document.getElementById('btn-remix').addEventListener('click', openRemix);
+    document.getElementById('btn-remix-back').addEventListener('click', () => show('results'));
+
+    function openRemix() {
+      const body = document.getElementById('remix-body');
+      const chipsRow = document.getElementById('remix-state-chips');
+      body.innerHTML = '';
+      chipsRow.innerHTML = '';
+
+      if (sessionHistory.length === 0) {
+        body.innerHTML = `
+          <div class="remix-empty">
+            Nothing in session yet. Generate a component first, then come
+            back to shift its colours.
+          </div>
+        `;
+        show('remix');
+        return;
+      }
+
+      // Pick most-recent entry by default.
+      _remix.entry = sessionHistory[sessionHistory.length - 1];
+      _remix.state = 'source';
+      _remix.hue = 0; _remix.sat = 100; _remix.bri = 100;
+
+      // Pixel-art flag from selected entry.
+      document.body.classList.toggle('pixel-art', !!_remix.entry.data.is_pixel_art);
+
+      body.innerHTML = `
+        <div class="remix-layout">
+          <div class="remix-stage">
+            <img id="remix-preview" alt="recolor preview" />
+          </div>
+          <div class="remix-controls">
+            <div class="remix-picker">
+              <label for="remix-entry-select">Component</label>
+              <select id="remix-entry-select"></select>
+            </div>
+            <div class="remix-slider" data-axis="hue">
+              <div class="slider-head">
+                <span class="name">Hue rotate</span>
+                <span class="value" id="remix-hue-value">0°</span>
+              </div>
+              <input id="remix-hue" type="range" min="0" max="360" value="0" step="1" />
+            </div>
+            <div class="remix-slider" data-axis="sat">
+              <div class="slider-head">
+                <span class="name">Saturation</span>
+                <span class="value" id="remix-sat-value">100%</span>
+              </div>
+              <input id="remix-sat" type="range" min="0" max="200" value="100" step="1" />
+            </div>
+            <div class="remix-slider" data-axis="bri">
+              <div class="slider-head">
+                <span class="name">Brightness</span>
+                <span class="value" id="remix-bri-value">100%</span>
+              </div>
+              <input id="remix-bri" type="range" min="50" max="150" value="100" step="1" />
+            </div>
+            <div class="remix-actions">
+              <button id="btn-remix-save" class="btn btn-accent">Save as new variant</button>
+              <button id="btn-remix-reset" class="btn btn-ghost remix-reset">Reset</button>
+            </div>
+            <div class="remix-meta" id="remix-meta">&mdash;</div>
+          </div>
+        </div>
+      `;
+
+      // Populate entry picker (newest first).
+      const sel = body.querySelector('#remix-entry-select');
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        sel.appendChild(new Option(sessionHistory[i].label, sessionHistory[i].id));
+      }
+      sel.value = _remix.entry.id;
+      sel.addEventListener('change', () => {
+        _remix.entry = sessionHistory.find(e => e.id === sel.value);
+        _remix.state = 'source';
+        document.body.classList.toggle('pixel-art', !!_remix.entry.data.is_pixel_art);
+        _renderRemixStateChips();
+        _applyRemixPreview();
+      });
+
+      // Wire sliders.
+      const wire = (axis, id, suffix) => {
+        const input = body.querySelector(`#remix-${axis}`);
+        const readout = body.querySelector(`#remix-${axis}-value`);
+        input.addEventListener('input', () => {
+          _remix[axis] = Number(input.value);
+          readout.textContent = input.value + suffix;
+          _applyRemixPreview();
+        });
+      };
+      wire('hue', 'hue', '°');
+      wire('sat', 'sat', '%');
+      wire('bri', 'bri', '%');
+
+      body.querySelector('#btn-remix-save').addEventListener('click', _saveRemix);
+      body.querySelector('#btn-remix-reset').addEventListener('click', _resetRemix);
+
+      _renderRemixStateChips();
+      _applyRemixPreview();
+      show('remix');
+    }
+
+    function _renderRemixStateChips() {
+      const row = document.getElementById('remix-state-chips');
+      row.innerHTML = '';
+      const keys = ['source', ...Object.keys(_remix.entry.data.variants || {})];
+      // Canonical order.
+      const order = ['source','normal','hover','pressed','disabled','unchecked','checked','empty','full'];
+      const sorted = order.filter(k => keys.includes(k)).concat(keys.filter(k => !order.includes(k)));
+      for (const k of sorted) {
+        const chip = document.createElement('button');
+        chip.className = 'remix-state-chip' + (_remix.state === k ? ' active' : '');
+        chip.textContent = k;
+        chip.addEventListener('click', () => {
+          _remix.state = k;
+          _renderRemixStateChips();
+          _applyRemixPreview();
+        });
+        row.appendChild(chip);
+      }
+    }
+
+    function _remixFilterString() {
+      return `hue-rotate(${_remix.hue}deg) saturate(${_remix.sat}%) brightness(${_remix.bri}%)`;
+    }
+
+    function _remixCurrentUrl() {
+      const e = _remix.entry;
+      if (_remix.state === 'source') return e.source;
+      return (e.data.variants || {})[_remix.state] || e.source;
+    }
+
+    function _applyRemixPreview() {
+      const img = document.getElementById('remix-preview');
+      const meta = document.getElementById('remix-meta');
+      if (!img) return;
+      img.src = _remixCurrentUrl();
+      img.style.filter = _remixFilterString();
+      if (meta) {
+        const parts = [];
+        if (_remix.hue !== 0) parts.push(`${_remix.hue > 0 ? '+' : ''}${_remix.hue}°`);
+        if (_remix.sat !== 100) parts.push(`sat ${_remix.sat}%`);
+        if (_remix.bri !== 100) parts.push(`bri ${_remix.bri}%`);
+        meta.textContent = parts.length ? parts.join(' · ') : 'no changes yet — move a slider';
+      }
+    }
+
+    function _resetRemix() {
+      _remix.hue = 0; _remix.sat = 100; _remix.bri = 100;
+      document.getElementById('remix-hue').value = 0;
+      document.getElementById('remix-sat').value = 100;
+      document.getElementById('remix-bri').value = 100;
+      document.getElementById('remix-hue-value').textContent = '0°';
+      document.getElementById('remix-sat-value').textContent = '100%';
+      document.getElementById('remix-bri-value').textContent = '100%';
+      _applyRemixPreview();
+    }
+
+    // Bake current filters into new PNG data URLs for every variant key and
+    // push the result to sessionHistory as a new entry.
+    async function _saveRemix() {
+      const entry = _remix.entry;
+      if (!entry) return;
+      const btn = document.getElementById('btn-remix-save');
+      btn.disabled = true;
+      btn.textContent = 'Baking...';
+
+      const filter = _remixFilterString();
+      const newVariants = {};
+      try {
+        for (const [state, url] of Object.entries(entry.data.variants || {})) {
+          newVariants[state] = await _applyFilterToUrl(url, filter);
+        }
+        const newSource = await _applyFilterToUrl(entry.source, filter);
+
+        // Build a new entry mimicking the /preview response shape so the
+        // downstream features (mockup/playground/compare/poster/livedemo)
+        // all just work.
+        const newData = {
+          component_type: entry.data.component_type,
+          is_pixel_art: entry.data.is_pixel_art,
+          source: newSource,
+          source_analysis: entry.data.source_analysis,
+          variants: newVariants,
+          zip_base64: entry.data.zip_base64 || '',
+          zip_name: entry.data.zip_name || `bananadot_${entry.data.component_type}_remix.zip`,
+        };
+
+        // Derive a File from the new source so variant/refine/downstream
+        // flows can re-POST it like any other history entry.
+        const newFile = dataUrlToFile(newSource, `remix_${Date.now()}.png`);
+        const label = _remixLabel(entry);
+        pushHistory(newFile, entry.data.component_type, newData, label);
+
+        btn.textContent = 'Saved to history ✓';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Save as new variant';
+        }, 1600);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Save as new variant';
+        showError('Remix save failed: ' + (err.message || err));
+      }
+    }
+
+    function _applyFilterToUrl(dataUrl, filter) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = !_remix.entry.data.is_pixel_art;
+          ctx.filter = filter;
+          ctx.drawImage(img, 0, 0);
+          try {
+            resolve(canvas.toDataURL('image/png'));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    function _remixLabel(baseEntry) {
+      const parts = [];
+      if (_remix.hue !== 0) parts.push(`${_remix.hue > 0 ? '+' : ''}${_remix.hue}°`);
+      if (_remix.sat !== 100) parts.push(`sat ${_remix.sat}%`);
+      if (_remix.bri !== 100) parts.push(`bri ${_remix.bri}%`);
+      const tag = parts.length ? parts.join(' ') : 'no-op';
+      return `${baseEntry.data.component_type} · remix ${tag}`.slice(0, 60);
     }
   </script>
 </body>
