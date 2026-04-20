@@ -284,6 +284,68 @@
     .variant-banner.active { display: block; }
     .variant-banner .mono { color: var(--fg); }
 
+    /* Variant option picker — three-up of candidates */
+    .variant-options { margin-top: 18px; display: none; flex-direction: column; gap: 10px; }
+    .variant-options.active { display: flex; }
+    .variant-options-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .option-slot {
+      display: flex; flex-direction: column;
+      border: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .option-slot .option-preview {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 10px 10px;
+      display: grid; place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .option-slot .option-preview img {
+      max-width: 80%; max-height: 80%;
+      opacity: 0;
+      transition: opacity 0.4s ease-in;
+      display: block;
+    }
+    .pixel-art .option-slot .option-preview img {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+    .option-slot.done .option-preview img { opacity: 1; }
+    .option-slot .option-spinner {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(245,197,24,0.25);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+      position: absolute;
+    }
+    .option-slot.done .option-spinner,
+    .option-slot.failed .option-spinner { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .option-slot .option-btn {
+      border: none;
+      border-top: 1px solid var(--line);
+      padding: 10px;
+      font-size: 12px;
+      background: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .option-slot.done .option-btn {
+      background: var(--accent); color: #000;
+      cursor: pointer;
+    }
+    .option-slot.done .option-btn:hover { filter: brightness(1.05); }
+    .option-slot.failed .option-btn {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--danger, #f87171);
+    }
+
     /* Kit section — generate matching components in the same visual style */
     .kit-section {
       margin-top: 40px;
@@ -589,8 +651,13 @@
           />
           <div class="variant-actions">
             <button id="btn-variant" class="btn btn-accent">Generate variant</button>
-            <span class="variant-hint mono">uses the source above as reference</span>
+            <span class="variant-hint mono">3 options, pick your favourite</span>
           </div>
+        </div>
+
+        <div id="variant-options" class="variant-options">
+          <div class="eyebrow">pick your favourite</div>
+          <div class="variant-options-strip"></div>
         </div>
       </div>
 
@@ -984,10 +1051,16 @@
     });
 
     // --- variant: create a similar component with a small modification
+    // New flow: first call /variant/options with count=3 and show the three
+    // candidates side-by-side. User picks one; that image becomes the new
+    // source and we run /preview on it for the full state pipeline. No more
+    // single-shot guessing — the user is in the loop.
     document.getElementById('btn-variant').addEventListener('click', generateVariant);
     document.getElementById('variant-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') generateVariant();
     });
+
+    const VARIANT_OPTION_COUNT = 3;
 
     async function generateVariant() {
       const text = document.getElementById('variant-input').value.trim();
@@ -999,40 +1072,119 @@
         showError('Original source image is no longer in session. Start over and upload again.');
         return;
       }
-      // Reuse the generating step for visual feedback.
-      show('generating');
-      const start = Date.now();
-      state.elapsedTimer = setInterval(() => {
-        const s = Math.floor((Date.now() - start) / 1000);
-        document.getElementById('generating-elapsed').textContent = s + 's';
-        document.getElementById('generating-status').textContent =
-          s < 10 ? 'Applying your modification...' :
-          s < 25 ? 'Modifying the base image with Nano Banana...' :
-          'Generating the new state set...';
-      }, 1000);
+
+      const picker = document.getElementById('variant-options');
+      const strip = picker.querySelector('.variant-options-strip');
+      strip.innerHTML = '';
+      for (let i = 0; i < VARIANT_OPTION_COUNT; i++) strip.appendChild(_newOptionSlot(i));
+      picker.style.display = '';
+
+      const btn = document.getElementById('btn-variant');
+      btn.disabled = true;
+      btn.textContent = 'Generating options...';
 
       try {
         const form = new FormData();
         form.append('image', state.file);
         form.append('component_type', state.componentType);
         form.append('modification', text);
-        const res = await fetch('/variant', { method: 'POST', body: form });
-        if (!res.ok) { throw new Error(await res.text() || `HTTP ${res.status}`); }
+        form.append('count', String(VARIANT_OPTION_COUNT));
+
+        const res = await fetch('/variant/options', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+
+        await parseSSE(res, (name, data) => _handleBatchEvent(name, data, text));
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate variant';
+      }
+    }
+
+    function _newOptionSlot(index) {
+      const slot = document.createElement('div');
+      slot.className = 'option-slot pending';
+      slot.dataset.index = index;
+      slot.innerHTML = `
+        <div class="option-preview">
+          <span class="option-spinner"></span>
+          <img alt="option ${index + 1}" />
+        </div>
+        <button class="btn option-btn" disabled>Generating&hellip;</button>
+      `;
+      return slot;
+    }
+
+    function _handleBatchEvent(name, data, modification) {
+      switch (name) {
+        case 'batch_started':
+          // No-op — slots are already laid out.
+          break;
+        case 'option_started':
+          // Already showing pending state; nothing to update.
+          break;
+        case 'option_completed': {
+          const slot = document.querySelector(`.option-slot[data-index="${data.index}"]`);
+          if (!slot) return;
+          slot.querySelector('img').src = data.image;
+          slot.classList.remove('pending');
+          slot.classList.add('done');
+          const btn = slot.querySelector('.option-btn');
+          btn.disabled = false;
+          btn.textContent = 'Use this one';
+          btn.addEventListener('click', () => pickVariantOption(data.image, modification));
+          break;
+        }
+        case 'option_failed': {
+          const slot = document.querySelector(`.option-slot[data-index="${data.index}"]`);
+          if (!slot) return;
+          slot.classList.remove('pending');
+          slot.classList.add('failed');
+          const btn = slot.querySelector('.option-btn');
+          btn.textContent = 'Failed';
+          btn.title = data.error || 'generation failed';
+          break;
+        }
+        case 'batch_done':
+          break;
+      }
+    }
+
+    // User picks one of the candidates → it becomes the new source; we run the
+    // full state pipeline via /preview and let renderResults take over.
+    async function pickVariantOption(dataUrl, modification) {
+      const modifiedFile = dataUrlToFile(dataUrl, `variant_${Date.now()}.png`);
+      state.file = modifiedFile;
+
+      document.getElementById('variant-options').style.display = 'none';
+      document.getElementById('variant-input').value = '';
+
+      show('generating');
+      const start = Date.now();
+      state.elapsedTimer = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        document.getElementById('generating-elapsed').textContent = s + 's';
+        document.getElementById('generating-status').textContent =
+          s < 10 ? 'Generating state variants from your pick…' :
+          s < 25 ? 'Working through hover / pressed / disabled…' :
+          'Packaging the state set…';
+      }, 1000);
+
+      try {
+        const form = new FormData();
+        form.append('image', modifiedFile);
+        form.append('component_type', state.componentType);
+        const res = await fetch('/preview', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
         const data = await res.json();
         state.result = data;
         clearInterval(state.elapsedTimer);
 
-        // Show the "viewing a variant" banner.
-        document.getElementById('variant-banner-text').textContent = data.modification || text;
+        document.getElementById('variant-banner-text').textContent = modification;
         document.getElementById('variant-banner').classList.add('active');
-        document.getElementById('variant-input').value = '';
 
-        // The variant's modified source becomes the active File so that a
-        // subsequent variant modifies THIS variant, not the original. Push to
-        // session history with the modification as the label.
-        const modifiedFile = dataUrlToFile(data.source, `variant_${Date.now()}.png`);
-        state.file = modifiedFile;
-        const label = `${state.componentType} · ${(data.modification || text).slice(0, 24)}`;
+        const label = `${state.componentType} · ${modification.slice(0, 24)}`;
         pushHistory(modifiedFile, state.componentType, data, label);
 
         renderResults(data);
