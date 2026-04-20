@@ -326,12 +326,24 @@ def _run_kit_pipeline(
     from app.pipeline import bundle, cleanup, generate as gen, godot
 
     is_pixel = cleanup._looks_like_pixel_art_bytes_from_source(raw)
-    variants = gen.generate_variants(
-        source_png=raw,
-        component_type=target_component_type,
-        kit_mode=True,
-        shape_guidance=shape_guidance,
-    )
+    if shape_guidance:
+        # Two-pass: generate canonical (cached on disk) → restyle to match source.
+        # Gives Gemini a clean shape-only target for Pass 1 and a clean style
+        # transfer for Pass 2 instead of trying to juggle both at once.
+        variants = gen.generate_kit_variants(
+            source_png=raw,
+            component_type=target_component_type,
+        )
+    else:
+        # Single-pass pure style transfer — user explicitly opted out of
+        # shape guidance, so they want the family to copy the source's
+        # silhouette (the 'quirky family' mode).
+        variants = gen.generate_variants(
+            source_png=raw,
+            component_type=target_component_type,
+            kit_mode=True,
+            shape_guidance=False,
+        )
     cleaned = cleanup.normalize_variants(variants, source_png=raw)
     out_dir = godot.emit_component(
         component_type=target_component_type,

@@ -67,6 +67,132 @@ def load_spec(component_type: str) -> dict:
 # --- main entry ----------------------------------------------------------------
 
 
+CANONICALS_DIR = Path(__file__).parent.parent / "specs" / "canonicals"
+
+
+def generate_kit_variants(
+    source_png: bytes,
+    component_type: str,
+) -> dict[str, bytes]:
+    """Two-pass kit generation.
+
+    Pass 1 — canonical generation: run the full /preview pipeline on the
+    component's shape primitive (neutral grayscale). Cached on disk so we
+    only pay this cost once per component type, ever.
+
+    Pass 2 — style transfer: take each canonical state and restyle it to
+    match the user's source. One Gemini call per state, image-to-image.
+
+    The result is a dict keyed by state name, PNG bytes. Same shape as
+    generate_variants so downstream cleanup/godot/bundle work unchanged.
+    """
+    canonicals = _load_or_build_canonicals(component_type)
+
+    results: dict[str, bytes] = {}
+    for state, canonical_png in canonicals.items():
+        results[state] = _apply_style_transfer(
+            canonical_png=canonical_png,
+            style_png=source_png,
+            component_type=component_type,
+            state=state,
+        )
+    return results
+
+
+def _load_or_build_canonicals(component_type: str) -> dict[str, bytes]:
+    """Load canonical state PNGs for `component_type` from disk, or build them.
+
+    Canonicals are state-by-state Gemini outputs generated from the shape
+    primitive via the standard `generate_variants` path. They never depend on
+    user input so they're checked in once and reused forever.
+    """
+    spec = load_spec(component_type)
+    state_keys = list(spec["states"].keys())
+    type_dir = CANONICALS_DIR / component_type
+
+    # Try to load all states from disk. If any are missing, regenerate the set.
+    if type_dir.is_dir():
+        files = {p.stem: p.read_bytes() for p in type_dir.glob("*.png")}
+        if all(s in files for s in state_keys):
+            return {s: files[s] for s in state_keys}
+
+    # Cache miss — generate canonicals by running the standard pipeline on the
+    # shape primitive. The primitive is the only input; the spec + consistency
+    # chaining do the rest (same rigor as a normal /preview run).
+    primitive_png = _make_shape_reference_png(component_type)
+    fresh = generate_variants(
+        source_png=primitive_png,
+        component_type=component_type,
+        kit_mode=False,
+        shape_guidance=False,
+    )
+
+    # Persist for next time. Non-fatal if we can't (e.g. read-only FS on prod).
+    try:
+        type_dir.mkdir(parents=True, exist_ok=True)
+        for state, png in fresh.items():
+            (type_dir / f"{state}.png").write_bytes(png)
+    except OSError:
+        pass
+
+    return fresh
+
+
+def _apply_style_transfer(
+    *,
+    canonical_png: bytes,
+    style_png: bytes,
+    component_type: str,
+    state: str,
+) -> bytes:
+    """Pass 2 — restyle a canonical component to match a style source.
+
+    Two images in, one out. The first image carries SILHOUETTE + CONTENT
+    (the canonical from Pass 1, which is already the right shape and the
+    right state). The second image carries ART STYLE (the user's source).
+    Gemini's job is just to repaint the first image in the second image's
+    style — no silhouette invention, no state reasoning.
+    """
+    from app.main import settings
+
+    with Image.open(io.BytesIO(canonical_png)) as c:
+        w, h = c.size
+
+    prompt = (
+        f"Restyle the first reference image (a {component_type} in its "
+        f"'{state}' state) to match the art style of the second reference "
+        "image. Preserve the first image's silhouette, content, structural "
+        "layout, and state-specific details EXACTLY. Only change the render "
+        "language: colour palette, line weight, edge treatment, level of "
+        "detail, and texture. The second image is a different UI component "
+        "type — take its STYLE, not its shape or subject.\n\n"
+        f"The output MUST be exactly {w}x{h} pixels with a transparent "
+        "background. Keep the first image's proportions. Do not add or "
+        "remove any visible elements."
+    )
+
+    client = genai.Client(api_key=settings.gemini_api_key)
+    response = client.models.generate_content(
+        model=settings.gemini_image_model,
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=canonical_png, mime_type="image/png"),
+            types.Part.from_bytes(data=style_png, mime_type="image/png"),
+        ],
+        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+    )
+
+    for candidate in response.candidates or []:
+        for part in (candidate.content.parts if candidate.content else []) or []:
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data:
+                return bytes(inline.data)
+
+    raise RuntimeError(
+        f"Style transfer returned no image for {component_type}/{state}"
+    )
+
+
 def generate_variants(
     source_png: bytes,
     component_type: str,
