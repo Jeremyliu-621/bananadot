@@ -252,6 +252,41 @@
     }
     .bundle-meta { color: var(--faint); font-size: 11px; }
 
+    /* Variant section — "make another like this with a small change" */
+    .variant-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .variant-section .variant-form {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 14px;
+    }
+    .variant-section input[type="text"] {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line-strong);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .variant-section input[type="text"]:focus { border-color: var(--accent); }
+    .variant-section input[type="text"]::placeholder { color: var(--faint); }
+    .variant-section .variant-actions { display: flex; align-items: center; gap: 10px; }
+    .variant-section .variant-hint { color: var(--faint); font-size: 11px; }
+
+    .variant-banner {
+      display: none;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line-strong);
+      background: rgba(245, 197, 24, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .variant-banner.active { display: block; }
+    .variant-banner .mono { color: var(--fg); }
+
     /* Error */
     .error-box {
       border: 1px solid var(--line-strong);
@@ -420,6 +455,30 @@
         <div class="actions">
           <button id="btn-restart" class="btn btn-ghost">Start over</button>
           <button id="btn-download" class="btn btn-accent">Download zip</button>
+        </div>
+      </div>
+
+      <div id="variant-banner" class="variant-banner">
+        Viewing a variant &mdash; modification: <span id="variant-banner-text" class="mono">&mdash;</span>
+      </div>
+
+      <div class="variant-section">
+        <div class="eyebrow">create a variant</div>
+        <div style="color: var(--muted); font-size: 13px; margin-top: 6px;">
+          Make another component like this one with a small change &mdash; different label, different color, anything visual.
+          The same state set (hover, pressed, disabled) gets regenerated to match.
+        </div>
+        <div class="variant-form">
+          <input
+            id="variant-input"
+            type="text"
+            placeholder="e.g. change the label to STOP, or make it red, or add a pause icon"
+            maxlength="200"
+          />
+          <div class="variant-actions">
+            <button id="btn-variant" class="btn btn-accent">Generate variant</button>
+            <span class="variant-hint mono">uses the source above as reference</span>
+          </div>
         </div>
       </div>
 
@@ -793,8 +852,62 @@
 
     document.getElementById('btn-restart').addEventListener('click', () => {
       state.file = null; state.result = null; fileInput.value = '';
+      document.getElementById('variant-banner').classList.remove('active');
+      document.getElementById('variant-input').value = '';
       show('upload');
     });
+
+    // --- variant: create a similar component with a small modification
+    document.getElementById('btn-variant').addEventListener('click', generateVariant);
+    document.getElementById('variant-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generateVariant();
+    });
+
+    async function generateVariant() {
+      const text = document.getElementById('variant-input').value.trim();
+      if (!text) {
+        document.getElementById('variant-input').focus();
+        return;
+      }
+      if (!state.file) {
+        showError('Original source image is no longer in session. Start over and upload again.');
+        return;
+      }
+      // Reuse the generating step for visual feedback.
+      show('generating');
+      const start = Date.now();
+      state.elapsedTimer = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        document.getElementById('generating-elapsed').textContent = s + 's';
+        document.getElementById('generating-status').textContent =
+          s < 10 ? 'Applying your modification...' :
+          s < 25 ? 'Modifying the base image with Nano Banana...' :
+          'Generating the new state set...';
+      }, 1000);
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('component_type', state.componentType);
+        form.append('modification', text);
+        const res = await fetch('/variant', { method: 'POST', body: form });
+        if (!res.ok) { throw new Error(await res.text() || `HTTP ${res.status}`); }
+        const data = await res.json();
+        state.result = data;
+        clearInterval(state.elapsedTimer);
+
+        // Show the "viewing a variant" banner.
+        document.getElementById('variant-banner-text').textContent = data.modification || text;
+        document.getElementById('variant-banner').classList.add('active');
+        document.getElementById('variant-input').value = '';
+
+        renderResults(data);
+        show('results');
+      } catch (err) {
+        clearInterval(state.elapsedTimer);
+        showError(err.message || String(err));
+      }
+    }
 
     function showError(detail) {
       document.getElementById('error-detail').textContent = detail;

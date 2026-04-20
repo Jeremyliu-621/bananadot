@@ -249,3 +249,55 @@ def _call_nano_banana(
                 return bytes(inline.data)
 
     raise RuntimeError(f"Nano Banana returned no image for state={state!r}")
+
+
+# --- variant feature ----------------------------------------------------------
+
+
+def apply_modification(
+    source_png: bytes,
+    modification: str,
+    component_type: str,
+) -> bytes:
+    """Apply a single text-described modification to the source image.
+
+    Returns a new PNG that is 'like the source but with [modification] applied.'
+    Used as the pre-step for the /variant flow: take an existing START button,
+    modify it to read STOP, THEN feed that as the new source to the regular
+    state-variant pipeline.
+
+    Same dimensions, same style, same everything else — only the requested
+    change is applied.
+    """
+    from app.main import settings
+
+    with Image.open(io.BytesIO(source_png)) as src:
+        src_w, src_h = src.size
+
+    prompt = (
+        "Reproduce the reference image EXACTLY — same art style, same colors, "
+        "same frames/borders, same dimensions, same level of detail — but "
+        f"apply this single modification: {modification.strip()}\n\n"
+        f"The output MUST be exactly {src_w}x{src_h} pixels. "
+        "Do not change anything else about the image besides the requested "
+        f"modification. This is a {component_type}; preserve its overall "
+        "shape and function."
+    )
+
+    client = genai.Client(api_key=settings.gemini_api_key)
+    response = client.models.generate_content(
+        model=settings.gemini_image_model,
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=source_png, mime_type="image/png"),
+        ],
+        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+    )
+
+    for candidate in response.candidates or []:
+        for part in (candidate.content.parts if candidate.content else []) or []:
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data:
+                return bytes(inline.data)
+
+    raise RuntimeError("Nano Banana returned no image for the modification step")
