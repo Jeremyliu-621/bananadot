@@ -17,6 +17,21 @@
     "preserve_source_backgrounds_and_frames": true
   },
 
+  "shape_profile": {
+    "description": "A checkbox is a compact, roughly square toggle. Small relative to buttons/panels. A single box with room for a check-mark or fill indicator inside.",
+    "typical_aspect_ratio": "1:1 (square, ±10%)",
+    "required_visual_features": [
+      "roughly square outer box",
+      "interior space for a checkmark or fill indicator",
+      "compact size — smaller than other interactive UI elements"
+    ],
+    "must_not_look_like": [
+      "a wide button",
+      "an elongated progress bar",
+      "a large panel frame"
+    ]
+  },
+
   "states": {
     "unchecked": {
       "description": "Unchecked (empty) state: the box with no indicator inside.",

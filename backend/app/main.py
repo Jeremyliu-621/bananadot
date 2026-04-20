@@ -249,6 +249,9 @@ async def kit(
     source_component_type: ComponentType = Form(
         ..., description="What the uploaded component is (button, panel, checkbox, progress_bar).",
     ),
+    shape_guidance: bool = Form(
+        True, description="Inject the target's shape_profile (aspect ratio, required features) to steer Gemini toward the right component shape. Turn off for pure style-copying if you want quirky matching silhouettes.",
+    ),
 ) -> StreamingResponse:
     """Generate matching components of every OTHER type in the source's style.
 
@@ -259,14 +262,16 @@ async def kit(
       component_failed     — if a single target fails (rest still run)
       kit_done             — terminal event, carries summary
 
-    The source image is passed into each target pipeline as
-    style_reference_png so Gemini copies the rendering language (art style,
-    palette, detail) but NOT the source's silhouette/subject.
+    The source image is passed into each target pipeline as the
+    STYLE_FAMILY_REFERENCE (kit_mode=True). When `shape_guidance` is on, the
+    target's shape_profile from its spec is also injected into the prompt so
+    Gemini produces the right silhouette for the component type, not just
+    the reference's silhouette.
     """
     raw = await _read_upload(image)
     targets = [ct for ct in ALL_COMPONENT_TYPES if ct != source_component_type]
     return StreamingResponse(
-        _kit_event_stream(raw, source_component_type, targets),
+        _kit_event_stream(raw, source_component_type, targets, shape_guidance),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -276,18 +281,20 @@ async def _kit_event_stream(
     raw: bytes,
     source_component_type: str,
     targets: list[str],
+    shape_guidance: bool,
 ) -> AsyncIterator[bytes]:
     """Yield SSE events as the kit generates. Each target runs sequentially."""
     yield _sse("kit_started", {
         "source_component_type": source_component_type,
         "targets": targets,
+        "shape_guidance": shape_guidance,
     })
 
     for target in targets:
         yield _sse("component_started", {"component": target})
         try:
             cleaned, zip_bytes, is_pixel = await asyncio.to_thread(
-                _run_kit_pipeline, raw, target,
+                _run_kit_pipeline, raw, target, shape_guidance,
             )
             yield _sse("component_completed", {
                 "component": target,
@@ -307,7 +314,7 @@ async def _kit_event_stream(
 
 
 def _run_kit_pipeline(
-    raw: bytes, target_component_type: str,
+    raw: bytes, target_component_type: str, shape_guidance: bool = True,
 ) -> tuple[dict[str, bytes], bytes, bool]:
     """Like _run_pipeline, but passes the source as style_reference_png.
 
@@ -323,6 +330,7 @@ def _run_kit_pipeline(
         source_png=raw,
         component_type=target_component_type,
         kit_mode=True,
+        shape_guidance=shape_guidance,
     )
     cleaned = cleanup.normalize_variants(variants, source_png=raw)
     out_dir = godot.emit_component(

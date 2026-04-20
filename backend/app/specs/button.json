@@ -27,6 +27,21 @@
     "preserve_source_backgrounds_and_frames": true
   },
 
+  "shape_profile": {
+    "description": "A button is a wider-than-tall pressable UI surface. Its silhouette is a single whole object (not a frame or container).",
+    "typical_aspect_ratio": "2.5:1 to 5:1 (clearly wider than tall)",
+    "required_visual_features": [
+      "one continuous pressable body",
+      "a label area (text, icon, or symbol surface)",
+      "visible affordance that it's an interactive control"
+    ],
+    "must_not_look_like": [
+      "a square checkbox",
+      "an elongated thin progress bar strip",
+      "a panel frame with an empty interior"
+    ]
+  },
+
   "states": {
     "normal": {
       "description": "Canonical resting state — reproduce the button exactly as shown in the source: same silhouette, same colors, same style, same level of detail. No state-specific modifications. This is the baseline against which hover/pressed/disabled are defined.",

@@ -70,6 +70,7 @@ def generate_variants(
     source_png: bytes,
     component_type: str,
     kit_mode: bool = False,
+    shape_guidance: bool = True,
 ) -> dict[str, bytes]:
     """Produce state variants using the JSON spec + consistency chaining.
 
@@ -86,6 +87,14 @@ def generate_variants(
       that renders in the same art style as this image, don't copy its
       shape." This prevents the "upload a checkbox, get a button that's
       secretly just the checkbox again" failure mode.
+
+    `shape_guidance` only matters in kit mode. When True (default), the
+    target's `shape_profile` block from its spec (typical aspect ratio,
+    required visual features, what it must not look like) is injected into
+    the prompt so Gemini produces a proper button shape / panel frame /
+    etc. Toggle off for pure style transfer — the family will copy the
+    reference's silhouette more faithfully but may not read as the right
+    component type.
     """
     from app.main import settings
 
@@ -128,6 +137,7 @@ def generate_variants(
             image_refs=image_refs,
             kit_mode=kit_mode,
             component_type=component_type,
+            shape_guidance=shape_guidance,
         )
 
         img_bytes = _call_nano_banana(
@@ -323,6 +333,7 @@ def _build_prompt(
     image_refs: list[tuple[bytes, dict]],
     kit_mode: bool = False,
     component_type: str | None = None,
+    shape_guidance: bool = True,
 ) -> str:
     """Build the structured JSON prompt + human-readable preamble.
 
@@ -360,6 +371,12 @@ def _build_prompt(
                 f"{component_type} silhouette from scratch."
             ),
         }
+        # When shape guidance is on, inject the target's shape_profile so
+        # Gemini has concrete geometric constraints (aspect ratio, required
+        # features, shapes to avoid). Purely shape/role info — no style
+        # guidance — so it doesn't blunt the reference-driven art direction.
+        if shape_guidance and "shape_profile" in spec:
+            prompt_payload["target_shape_profile"] = spec["shape_profile"]
 
     preamble = _build_preamble(
         state=state,

@@ -1,38 +1,66 @@
 {
-  "task": "generate_ui_state_variant",
+  "task": "generate_ui_panel_frame",
   "component_type": "panel",
+
+  "component_role_description": "A panel is a decorative UI CONTAINER — a stretchable frame that holds other content (text, other widgets) at runtime. Its defining feature is a 9-slice structure: thick, symmetric decorative borders at the edges with a simple, plain-or-repeating interior that the engine stretches to fit variable content sizes. A panel is NOT a standalone whole object (like a button is). It is a FRAME whose middle is meant to be filled in, not illustrated.",
 
   "reference_image": {
     "role": "STYLE_AND_SUBJECT_REFERENCE",
-    "use_for": ["art_style", "color_palette", "edge_treatment", "proportions"],
+    "use_for": ["art_style", "color_palette", "edge_treatment", "line_weight"],
     "must_not_extract": ["background_or_surrounding_context"],
-    "critical_note": "The reference image IS the panel. Match its style and edge treatment exactly."
+    "critical_note": "If this image is a panel, reproduce its style. If it's a different component type (kit mode), use it only for art-style cues and invent a panel-shaped frame from scratch."
   },
 
   "output_constraints": {
     "dimensions": "match_reference_exactly",
-    "silhouette": "identical_to_reference",
-    "palette": "derived_from_reference_plus_state_adjustments_only",
-    "single_element": true,
-    "nine_slice_compatible": true,
+    "silhouette_role": "decorative_container_frame",
+    "nine_slice_structure_required": true,
+    "interior_fill": "simple, uniform, or small-scale repeating pattern only — absolutely NO detailed content, illustrations, or focal art in the middle third",
+    "symmetric_corners": "all four corners must be visually consistent (top-left pairs with top-right, etc.)",
+    "edge_symmetry": "top and bottom edges mirror; left and right edges mirror",
+    "border_thickness": "borders should occupy at least 15% of the shorter image dimension so the 9-slice has room to work",
+    "palette": "derived_from_reference",
     "preserve_source_backgrounds_and_frames": true
+  },
+
+  "shape_profile": {
+    "description": "A panel is a decorative rectangular container frame with a 9-slice-compatible structure: thick symmetric borders around a simple interior. It is NOT a standalone whole object — it is a frame whose middle will be stretched to hold other content.",
+    "typical_aspect_ratio": "1:1 to 4:3 (squarish to slightly wider than tall)",
+    "required_visual_features": [
+      "a clear rectangular outer frame",
+      "thick symmetric decorative borders (same treatment on all four edges; corners that visually pair up)",
+      "a simple, plain, or small-scale repeating interior — no focal artwork in the middle",
+      "9-slice compatibility: the border corners + edges should be the detailed parts, not the centre"
+    ],
+    "must_not_look_like": [
+      "a button (buttons are whole pressable objects with label areas; panels are empty containers)",
+      "an icon or illustration with a scene in the middle",
+      "a progress bar (panels are substantially taller than progress bars)",
+      "a single solid rectangle with no visible border treatment"
+    ]
   },
 
   "states": {
     "normal": {
-      "description": "Canonical resting state — reproduce the panel exactly as shown in the source: same silhouette, same colors, same style, same edge treatment. No state-specific modifications.",
+      "description": "Canonical resting panel — a decorative rectangular frame with thick symmetric borders and a plain or gently-textured interior. No state-specific modifications.",
       "modifications": {}
     }
   },
 
   "forbidden_content": [
-    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
-    "additional UI elements",
-    "text or labels not in the source"
+    "a detailed scene, illustration, character, or focal artwork in the middle of the panel",
+    "asymmetric corners (top-left must pair with top-right; top pair must pair with bottom pair)",
+    "thin or missing borders — this is a frame, so borders must be substantial",
+    "baked-in text, labels, or UI elements inside the panel (panels host text at runtime; they don't contain it)",
+    "a button-shaped or icon-shaped silhouette — panels are containers, not whole pressable/clickable units",
+    "stripping or altering any backgrounds, frames, or textures that are visible in the source"
   ],
 
   "priority_rules": [
-    "DIMENSIONS MUST match the reference image exactly",
-    "Edge treatment must tile cleanly as a 9-slice background"
+    "A panel is a FRAME, not a whole object. The middle MUST be simple enough to stretch without revealing illustration.",
+    "9-slice structure is non-negotiable: thick symmetric corners + stretchable edges + plain center.",
+    "DIMENSIONS must match the reference image exactly.",
+    "Style (colours, line weight, edge treatment) comes from the reference; the SHAPE must be a rectangular panel frame.",
+    "Symmetry matters more than creative detail here — a panel's job is to tile cleanly."
   ]
 }

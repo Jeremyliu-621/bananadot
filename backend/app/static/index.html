@@ -506,22 +506,24 @@
     }
     .pixel-art .kt-panel { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
 
-    .kt-progress { display: flex; flex-direction: column; gap: 8px; width: 240px; }
+    .kt-progress { display: flex; flex-direction: column; gap: 8px; width: 280px; }
     .kt-progress .kt-progress-bar {
       position: relative;
-      height: 22px;
+      height: 48px;
       background-color: rgba(255,255,255,0.03);
       background-image: var(--kt-progress-empty);
-      background-size: 100% 100%;
+      background-size: contain;
       background-repeat: no-repeat;
+      background-position: center;
       border: 1px solid var(--line-strong);
       overflow: hidden;
     }
     .kt-progress .kt-progress-fill {
       position: absolute; inset: 0;
       background-image: var(--kt-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
-      background-size: 100% 100%;
+      background-size: contain;
       background-repeat: no-repeat;
+      background-position: center;
       clip-path: inset(0 calc(100% - var(--kt-progress-pct, 50%)) 0 0);
       transition: clip-path 0.1s linear;
     }
@@ -1871,7 +1873,17 @@
         </div>
         <div class="kit-actions">
           <button id="btn-kit" class="btn btn-accent">Generate matching kit</button>
-          <span class="variant-hint mono">~2-3 min total</span>
+          <label class="kt-ctrl-row" style="margin-left:14px;">
+            <input id="kit-shape-guidance" type="checkbox" checked />
+            shape guidance
+          </label>
+          <span class="variant-hint mono" style="margin-left:auto;">~2-3 min total</span>
+        </div>
+        <div class="variant-hint mono" style="margin-top:8px; color:var(--faint); font-size:10px; max-width:600px;">
+          on (default): each target gets its own component-shape prior injected into the prompt
+          (buttons are wide, checkboxes are square, progress bars are long-and-thin, panels are
+          frame-shaped). off: pure style transfer &mdash; the family copies the reference's
+          silhouette more faithfully, even if it means a checkbox-shaped button.
         </div>
 
         <div id="kit-progress" class="kit-progress">
@@ -2597,9 +2609,11 @@
       progressEl.classList.remove('active');
 
       try {
+        const shapeGuidance = document.getElementById('kit-shape-guidance')?.checked ?? true;
         const form = new FormData();
         form.append('image', state.file);
         form.append('source_component_type', sourceType);
+        form.append('shape_guidance', shapeGuidance ? 'true' : 'false');
 
         const res = await fetch('/kit', { method: 'POST', body: form });
         if (!res.ok) {

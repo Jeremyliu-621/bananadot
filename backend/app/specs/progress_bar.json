@@ -17,6 +17,21 @@
     "preserve_source_backgrounds_and_frames": true
   },
 
+  "shape_profile": {
+    "description": "A progress bar is a long thin horizontal strip: an outer frame with a visible fill region inside. Its aspect ratio is elongated so the fill's width change reads clearly as progress.",
+    "typical_aspect_ratio": "4:1 to 10:1 (much wider than tall)",
+    "required_visual_features": [
+      "elongated horizontal outer frame",
+      "visible interior fill region distinct from the frame",
+      "thin vertical profile — compact height, substantial width"
+    ],
+    "must_not_look_like": [
+      "a button (shorter and thicker)",
+      "a square checkbox",
+      "a panel frame with a large empty interior"
+    ]
+  },
+
   "states": {
     "empty": {
       "description": "Empty (0% filled) state: the outer frame with no fill inside.",
