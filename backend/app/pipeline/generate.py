@@ -37,12 +37,13 @@ Contract:
 
 from __future__ import annotations
 
+import functools
 import io
 import json
 from collections import Counter
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from google import genai
 from google.genai import types
 
@@ -110,13 +111,17 @@ def generate_variants(
     for state, state_spec in spec["states"].items():
         # Every state goes through Gemini (no passthrough branch). See module docstring.
         if kit_mode:
-            # Single reference image: the source, but relabelled as style-only.
-            # No separate STYLE_AND_SUBJECT image — that was the bug: showing
-            # the source twice with contradictory roles made Gemini copy it
-            # literally instead of inventing a new silhouette.
-            image_refs: list[tuple[bytes, dict]] = [
-                (source_png, _style_family_meta_for_kit(component_type)),
-            ]
+            # Kit mode always passes the user's source as STYLE_FAMILY_REFERENCE.
+            # When shape_guidance is on, ALSO prepend a neutral grey shape
+            # primitive as SHAPE_REFERENCE — giving Gemini the silhouette
+            # visually instead of trying to convey it with text alone.
+            image_refs: list[tuple[bytes, dict]] = []
+            if shape_guidance:
+                image_refs.append(
+                    (_make_shape_reference_png(component_type),
+                     _shape_reference_meta(component_type))
+                )
+            image_refs.append((source_png, _style_family_meta_for_kit(component_type)))
             if anchor_png is not None and runtime_ctx.get("consistency_anchor"):
                 image_refs.append((anchor_png, runtime_ctx["consistency_anchor"]))
         else:
@@ -263,6 +268,85 @@ def _style_family_meta() -> dict:
     }
 
 
+# --- canonical shape references ---------------------------------------------
+# Small grayscale geometric primitives, one per component type. Neutral
+# style-wise on purpose — their only job in the prompt is to carry the
+# target's silhouette and aspect ratio. Gemini extracts SHAPE from them and
+# STYLE from the user's source (which is passed separately as
+# STYLE_FAMILY_REFERENCE). lru_cache keeps us from redrawing every request.
+
+
+@functools.lru_cache(maxsize=None)
+def _make_shape_reference_png(component_type: str) -> bytes:
+    """Render the canonical grayscale shape primitive for the target type."""
+    if component_type == "button":
+        w, h = 300, 100  # ~3:1, wider than tall
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        body = [4, 4, w - 4, h - 4]
+        try:
+            d.rounded_rectangle(body, radius=16, outline=(200, 200, 200), fill=(80, 80, 80), width=3)
+        except AttributeError:
+            d.rectangle(body, outline=(200, 200, 200), fill=(80, 80, 80), width=3)
+        d.rectangle([40, 30, w - 40, h - 30], outline=(200, 200, 200), width=1)
+    elif component_type == "checkbox":
+        w, h = 120, 120  # 1:1
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle([4, 4, w - 4, h - 4], outline=(200, 200, 200), fill=(80, 80, 80), width=4)
+    elif component_type == "progress_bar":
+        w, h = 420, 60  # 7:1, long and thin
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle([2, 2, w - 2, h - 2], outline=(200, 200, 200), fill=(48, 48, 48), width=3)
+        d.rectangle([8, 8, int(w * 0.6), h - 8], outline=None, fill=(160, 160, 160))
+    elif component_type == "panel":
+        w, h = 300, 240  # 5:4
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle([0, 0, w - 1, h - 1], outline=(220, 220, 220), fill=(48, 48, 48), width=2)
+        d.rectangle([30, 30, w - 30, h - 30], outline=(150, 150, 150), fill=(70, 70, 70), width=2)
+        d.rectangle([42, 42, w - 42, h - 42], outline=(210, 210, 210), fill=(96, 96, 96), width=1)
+    else:
+        w, h = 100, 100
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle([4, 4, w - 4, h - 4], outline=(200, 200, 200), fill=(80, 80, 80), width=2)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _shape_reference_meta(target_component_type: str) -> dict:
+    """Metadata for image_1 in kit + shape_guidance mode — the shape primitive."""
+    return {
+        "role": "SHAPE_REFERENCE",
+        "use_for": [
+            "silhouette",
+            "aspect_ratio",
+            "proportions",
+            "structural_role_and_affordances",
+        ],
+        "must_not_extract": [
+            "colors",
+            "textures",
+            "art_style",
+            "line_weight",
+            "visual_detail",
+            "rendering_technique",
+        ],
+        "critical_note": (
+            f"This is a NEUTRAL GRAYSCALE GEOMETRIC reference that shows the "
+            f"canonical SHAPE and aspect ratio of a {target_component_type}. "
+            f"Use ONLY its silhouette, proportions, and structural layout "
+            f"(e.g. where the label area / fill region / corners live). "
+            f"Do NOT use any of its colours, textures, or rendering style — "
+            f"those come from the STYLE_FAMILY_REFERENCE image (separate)."
+        ),
+    }
+
+
 def _style_family_meta_for_kit(target_component_type: str) -> dict:
     """Kit-mode metadata — the source image is ONLY a style guide.
 
@@ -402,30 +486,61 @@ def _build_preamble(
 
     # Kit mode gets its own preamble because the framing is fundamentally
     # different: "invent a new X" rather than "generate states of THIS thing".
+    # With shape_guidance we have up to 3 images with distinct roles; without
+    # it we have 1 (style) or 2 (style + anchor).
     if kit_mode and component_type:
+        # Describe each attached image by its role, in attach order.
+        role_lines: list[str] = []
+        for i, (_, meta) in enumerate(image_refs, start=1):
+            role = meta.get("role", "REFERENCE")
+            if role == "SHAPE_REFERENCE":
+                role_lines.append(
+                    f"- Image {i} — SHAPE reference: a neutral grayscale "
+                    f"geometric primitive showing the canonical shape, aspect "
+                    f"ratio, and structural layout of a {component_type}. "
+                    f"Use this for SILHOUETTE, PROPORTIONS, and STRUCTURE only. "
+                    f"Ignore its colours and lack of texture."
+                )
+            elif role == "STYLE_FAMILY_REFERENCE":
+                role_lines.append(
+                    f"- Image {i} — STYLE reference: a different component "
+                    f"type in the visual style you must match. Use this for "
+                    f"ART STYLE, COLOUR PALETTE, LINE WEIGHT, EDGE TREATMENT, "
+                    f"and LEVEL OF DETAIL only. Do NOT copy its silhouette "
+                    f"or subject."
+                )
+            elif role == "CONSISTENCY_REFERENCE":
+                role_lines.append(
+                    f"- Image {i} — CONSISTENCY reference: a previously "
+                    f"generated '{meta.get('state_name', '?')}' state of the "
+                    f"{component_type} you're building. Match its EXACT "
+                    f"dimensions, silhouette, and rendering style."
+                )
+
+        has_shape_ref = any(m.get("role") == "SHAPE_REFERENCE" for _, m in image_refs)
+
         lines = [
             f"Generate a NEW {component_type} for the '{state}' state.",
             "",
-            f"The reference image is a DIFFERENT UI component type (e.g. a "
-            f"checkbox when you're generating a {component_type}). It is "
-            "provided ONLY as a style guide — copy its colour palette, line "
-            "weight, edge treatment, level of detail, and overall rendering "
-            "feel. Do NOT copy its silhouette, shape, or subject.",
+            f"You are given {len(image_refs)} reference image"
+            f"{'s' if len(image_refs) != 1 else ''} with distinct roles:",
             "",
-            f"You MUST invent an appropriate {component_type} silhouette "
-            f"from scratch. The output must clearly read as a "
-            f"{component_type}, not as a copy of the reference image.",
+            *role_lines,
+            "",
         ]
-        if len(image_refs) > 1:
-            for i, (_, meta) in enumerate(image_refs[1:], start=2):
-                if meta.get("role") == "CONSISTENCY_REFERENCE":
-                    lines.append("")
-                    lines.append(
-                        f"Image {i}: a previously generated "
-                        f"'{meta.get('state_name', '?')}' state of the "
-                        f"{component_type} you are building — match its "
-                        "exact dimensions, silhouette, and rendering style."
-                    )
+        if has_shape_ref:
+            lines.append(
+                f"Combine them: take the STYLE from the STYLE reference and "
+                f"apply it to the SHAPE from the SHAPE reference. The output "
+                f"must clearly read as a {component_type}, not as a copy of "
+                f"any single reference."
+            )
+        else:
+            lines.append(
+                f"You MUST invent an appropriate {component_type} silhouette "
+                f"from scratch. The output must clearly read as a "
+                f"{component_type}, not as a copy of the reference image."
+            )
         lines.append("")
         lines.append(f"The output MUST be exactly {w}x{h} pixels.")
         return "\n".join(lines)
