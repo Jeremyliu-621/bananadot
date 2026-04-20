@@ -199,19 +199,27 @@ def _build_prompt(
 
     if anchor_state:
         preamble = (
-            "Generate the specified UI state variant. You are given TWO reference "
-            "images:\n"
-            "- Image 1: the ORIGINAL source element (style and subject reference)\n"
-            f"- Image 2: a previously generated '{anchor_state}' state "
-            "(CONSISTENCY REFERENCE — match its exact dimensions, rendering style, "
-            "and level of detail)\n\n"
-            f"The output MUST be exactly {w}x{h} pixels with a transparent background."
+            "You are given TWO reference images:\n"
+            "- Image 1: the ORIGINAL source — the content/colors/style ground truth.\n"
+            f"- Image 2: a previously generated '{anchor_state}' state — the dimensions "
+            "and rendering-consistency ground truth.\n\n"
+            "Reproduce the content and colors of Image 1 EXACTLY — same subject, same "
+            "colors, same art style, same frames/borders/plates — with the rendering "
+            "consistency of Image 2. Then apply ONLY the minimal adjustment described "
+            f"in `state_modifications` below for the '{state}' state. Do not invent "
+            "new content. Do not remove visible elements. Do not strip backgrounds or "
+            "frames — preserve whatever is visible in the source.\n\n"
+            f"The output MUST be exactly {w}x{h} pixels."
         )
     else:
         preamble = (
-            "Generate the specified UI state variant based on the reference image "
-            f"provided. The output MUST be exactly {w}x{h} pixels with a "
-            "transparent background."
+            "Reproduce the reference image EXACTLY — same subject, same colors, same "
+            "art style, same frames/borders/plates, same dimensions. Then apply ONLY "
+            "the minimal adjustment described in `state_modifications` below for the "
+            f"'{state}' state. Do not invent new content. Do not remove visible "
+            "elements. Do not strip backgrounds or frames — preserve whatever is "
+            "visible in the source.\n\n"
+            f"The output MUST be exactly {w}x{h} pixels."
         )
 
     return f"{preamble}\n\n```json\n{json.dumps(prompt_payload, indent=2)}\n```"

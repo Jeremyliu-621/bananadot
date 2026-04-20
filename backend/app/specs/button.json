@@ -20,11 +20,11 @@
 
   "output_constraints": {
     "dimensions": "match_reference_exactly",
-    "background": "transparent_alpha_0",
     "silhouette": "identical_to_reference",
-    "palette": "derived_from_reference",
+    "palette": "derived_from_reference_plus_state_adjustments_only",
     "single_element": true,
-    "preserve_text": true
+    "preserve_text": true,
+    "preserve_source_backgrounds_and_frames": true
   },
 
   "states": {
@@ -58,7 +58,7 @@
   },
 
   "forbidden_content": [
-    "background fills or colored plates behind the element",
+    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
     "additional UI elements not present in the source",
     "text changes — preserve any text exactly as in the source",
     "anti-aliasing on pixel art sources",
