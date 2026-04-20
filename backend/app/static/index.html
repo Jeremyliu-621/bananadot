@@ -501,6 +501,223 @@
       margin-bottom: 20px;
     }
 
+    /* --- mockup scene: "see in a game screen" ----------------------------
+       All textures are driven off CSS custom properties set by openMockup()
+       in JS: --mockup-panel, --mockup-btn-* (normal/hover/pressed/disabled),
+       --mockup-check-unchecked, --mockup-check-checked, --mockup-progress-empty,
+       --mockup-progress-full. Missing textures leave the prop empty; the
+       CSS falls back to plain outlined shapes so the scene is never blank. */
+
+    .mockup-section {
+      min-height: 100vh;
+      padding: 24px 0 40px;
+    }
+    .mockup-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .mockup-header .eyebrow { margin-bottom: 0; }
+
+    /* The stage — styled like a game window canvas */
+    .mockup-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
+        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: 22px 32px 28px;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Top strip — progress texture OR default thin bar */
+    .mockup-top {
+      display: flex; align-items: center; gap: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .mockup-top .mockup-progress {
+      flex: 1;
+      height: 16px;
+      position: relative;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--mockup-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .mockup-top .mockup-progress-fill {
+      position: absolute; inset: 0;
+      width: 68%;
+      background-image: var(--mockup-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-size: auto 100%;
+      background-repeat: no-repeat;
+      clip-path: inset(0 32% 0 0);
+    }
+    .pixel-art .mockup-top .mockup-progress,
+    .pixel-art .mockup-top .mockup-progress-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    /* Center — panel-framed menu card */
+    .mockup-center {
+      display: grid; place-items: center;
+    }
+    .mockup-panel {
+      width: 420px;
+      max-width: 85%;
+      min-height: 260px;
+      padding: 26px 32px 32px;
+      color: var(--fg);
+      display: flex; flex-direction: column; gap: 16px;
+
+      /* Use the panel texture if provided; otherwise a subtle neutral card */
+      background-color: rgba(16, 16, 20, 0.75);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--mockup-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 18px;
+    }
+    .pixel-art .mockup-panel {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+    }
+    .mockup-panel .mockup-title {
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.01em;
+      text-align: center;
+      color: var(--fg);
+    }
+    .mockup-panel .mockup-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+
+    /* Menu button row — either real textures or labeled placeholders */
+    .mockup-menu {
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: center;
+    }
+    .mockup-menu-btn {
+      width: 100%;
+      min-height: 44px;
+      padding: 0;
+      background-color: transparent;
+      background-image: var(--mockup-btn-normal, none);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font: inherit;
+      color: var(--fg);
+      font-size: 14px; font-weight: 500;
+      position: relative;
+    }
+    .mockup-menu-btn:hover { background-image: var(--mockup-btn-hover, var(--mockup-btn-normal, none)); }
+    .mockup-menu-btn:active { background-image: var(--mockup-btn-pressed, var(--mockup-btn-normal, none)); }
+    .mockup-menu-btn:disabled { background-image: var(--mockup-btn-disabled, var(--mockup-btn-normal, none)); cursor: not-allowed; opacity: 0.7; }
+    .pixel-art .mockup-menu-btn { image-rendering: pixelated; image-rendering: -moz-crisp-edges; }
+
+    /* Placeholder fallback: outlined accent rect with label when no texture */
+    .mockup-menu-btn.placeholder {
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.02);
+      color: var(--muted);
+    }
+    .mockup-menu-btn.placeholder:hover {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+    .mockup-menu-btn .label {
+      position: relative;
+      padding: 0 18px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Checkbox row (sound toggle) */
+    .mockup-checkbox-row {
+      display: flex; align-items: center; gap: 10px;
+      justify-content: center;
+      font-size: 12px; color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mockup-checkbox-row .mockup-check {
+      width: 20px; height: 20px;
+      background-color: transparent;
+      background-image: var(--mockup-check-unchecked, none);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      border: 1px solid var(--line-strong);
+      cursor: pointer;
+      padding: 0;
+    }
+    .mockup-checkbox-row .mockup-check[data-checked="true"] {
+      background-image: var(--mockup-check-checked, none);
+      border-color: var(--accent);
+    }
+    .mockup-checkbox-row .mockup-check.placeholder[data-checked="true"] {
+      background: var(--accent);
+    }
+    .pixel-art .mockup-checkbox-row .mockup-check {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    /* Bottom strip — small HUD tags: color swatches + attribution */
+    .mockup-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .mockup-palette { display: flex; gap: 4px; }
+    .mockup-palette span {
+      width: 12px; height: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Empty state: no session history yet */
+    .mockup-empty {
+      display: grid; place-items: center;
+      min-height: 260px;
+      color: var(--faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    /* Section for the "See in a game screen" launcher button */
+    .mockup-launcher-section {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .mockup-launcher-section .mockup-launcher-intro {
+      color: var(--muted); font-size: 13px; margin-top: 6px; margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -683,6 +900,32 @@
         </div>
       </div>
 
+      <!-- Launcher for the "See in a game screen" mockup scene -->
+      <div class="mockup-launcher-section">
+        <div class="eyebrow">see it in context</div>
+        <div class="mockup-launcher-intro">
+          Drop every component you have this session into a fake game menu — one
+          stage, real textures. The best way to feel whether your kit actually
+          works as UI.
+        </div>
+        <div class="kit-actions">
+          <button id="btn-mockup" class="btn btn-accent">See in a game screen</button>
+          <span class="variant-hint mono">uses whatever's in your session history</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- mockup scene -->
+    <section id="step-mockup" class="step mockup-section">
+      <div class="mockup-header">
+        <div class="eyebrow">game screen mockup</div>
+        <button id="btn-mockup-back" class="btn btn-ghost">&larr; Back to results</button>
+      </div>
+
+      <div id="mockup-stage-host">
+        <!-- populated by openMockup() -->
+      </div>
     </section>
 
     <!-- error -->
@@ -730,7 +973,7 @@
       },
     };
 
-    const steps = ['upload', 'configure', 'generating', 'results', 'error'];
+    const steps = ['upload', 'configure', 'generating', 'results', 'error', 'mockup'];
     const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
 
     // --- session history ------------------------------------------------------
@@ -1386,6 +1629,185 @@
         URL.revokeObjectURL(a.href);
       });
       members.appendChild(card);
+    }
+
+    // --- mockup scene: "See in a game screen" -------------------------------
+    // Pulls from sessionHistory (built up as the user generates components).
+    // Builds a fake game pause-menu with real generated textures when they
+    // exist, placeholder tiles when they don't. Zero backend calls — this
+    // is a pure rendering of stuff already in memory.
+
+    document.getElementById('btn-mockup').addEventListener('click', openMockup);
+    document.getElementById('btn-mockup-back').addEventListener('click', () => show('results'));
+
+    // Grab the most recent entry for a given component_type from sessionHistory,
+    // or null if none. Browsing backwards = newest first.
+    function _latestHistory(type) {
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        if (sessionHistory[i].type === type) return sessionHistory[i];
+      }
+      return null;
+    }
+
+    // Up to N most recent button entries, newest first — used to populate the
+    // 3 menu buttons with distinct textures when the user has generated
+    // multiple buttons (e.g. via /variant: START -> STOP -> OPTIONS).
+    function _latestButtons(n) {
+      const out = [];
+      for (let i = sessionHistory.length - 1; i >= 0 && out.length < n; i--) {
+        if (sessionHistory[i].type === 'button') out.push(sessionHistory[i]);
+      }
+      return out;
+    }
+
+    function openMockup() {
+      const stageHost = document.getElementById('mockup-stage-host');
+      stageHost.innerHTML = '';
+
+      // If nothing in history at all, show an empty-state prompt.
+      if (sessionHistory.length === 0) {
+        stageHost.innerHTML = `
+          <div class="mockup-stage" style="display:block">
+            <div class="mockup-empty">
+              No components generated yet this session.<br />
+              Head back, upload something, and return here to see it in context.
+            </div>
+          </div>
+        `;
+        show('mockup');
+        return;
+      }
+
+      const buttons = _latestButtons(3);
+      const panel = _latestHistory('panel');
+      const checkbox = _latestHistory('checkbox');
+      const progress = _latestHistory('progress_bar');
+
+      // Menu labels — cosmetic placeholder overlay since buttons carry their
+      // baked-in text already. For variants we don't know the label; use
+      // history-index-based labels as a best guess.
+      const menuLabels = ['Start', 'Options', 'Quit'];
+
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage';
+
+      // Top strip: progress or a thin accent bar
+      stage.appendChild(_mockupTopStrip(progress));
+      // Center: panel-framed menu
+      stage.appendChild(_mockupCenter(panel, buttons, menuLabels, checkbox));
+      // Bottom strip: palette swatches + caption
+      stage.appendChild(_mockupBottomStrip(buttons[0] || panel || checkbox || progress));
+
+      // Hook custom properties per component: menu buttons get the first
+      // button's textures by default; individual buttons with their own
+      // history entries override those.
+      _applyMockupTextures(stage, buttons, panel, checkbox, progress);
+
+      stageHost.appendChild(stage);
+      show('mockup');
+    }
+
+    function _mockupTopStrip(progressEntry) {
+      const el = document.createElement('div');
+      el.className = 'mockup-top';
+      el.innerHTML = `
+        <span>loading</span>
+        <div class="mockup-progress"><div class="mockup-progress-fill"></div></div>
+        <span>68%</span>
+      `;
+      return el;
+    }
+
+    function _mockupCenter(panelEntry, buttons, labels, checkboxEntry) {
+      const center = document.createElement('div');
+      center.className = 'mockup-center';
+
+      const panel = document.createElement('div');
+      panel.className = 'mockup-panel';
+      panel.innerHTML = `
+        <div>
+          <div class="mockup-title">Bananadot Arcade</div>
+          <div class="mockup-subtitle">press start</div>
+        </div>
+        <div class="mockup-menu"></div>
+        <div class="mockup-checkbox-row">
+          <button class="mockup-check${checkboxEntry ? '' : ' placeholder'}" data-checked="true" aria-label="Sound"></button>
+          <span>Enable sound</span>
+        </div>
+      `;
+
+      const menu = panel.querySelector('.mockup-menu');
+      // Three menu buttons; each pulls its own texture entry if available.
+      for (let i = 0; i < 3; i++) {
+        const entry = buttons[i] || buttons[0] || null;
+        const btn = document.createElement('button');
+        btn.className = entry ? 'mockup-menu-btn' : 'mockup-menu-btn placeholder';
+        btn.dataset.slot = i;
+        btn.innerHTML = `<span class="label">${labels[i] || `option ${i + 1}`}</span>`;
+        // Per-slot CSS vars so multiple different buttons render side-by-side.
+        if (entry) {
+          const v = entry.data.variants || {};
+          if (v.normal)   btn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+          if (v.hover)    btn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+          if (v.pressed)  btn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+          if (v.disabled) btn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+        }
+        btn.addEventListener('click', (e) => e.preventDefault());
+        menu.appendChild(btn);
+      }
+
+      const check = panel.querySelector('.mockup-check');
+      check.addEventListener('click', () => {
+        const cur = check.dataset.checked === 'true';
+        check.dataset.checked = String(!cur);
+      });
+
+      center.appendChild(panel);
+      return center;
+    }
+
+    function _mockupBottomStrip(anyEntry) {
+      const el = document.createElement('div');
+      el.className = 'mockup-bottom';
+      const swatches = _extractSwatches(anyEntry);
+      el.innerHTML = `
+        <span>bananadot mockup</span>
+        <div class="mockup-palette">${swatches.map(c => `<span style="background:${c}"></span>`).join('')}</div>
+      `;
+      return el;
+    }
+
+    function _extractSwatches(entry) {
+      // If the backend supplied dominant colors via source_analysis, use
+      // them; otherwise synthesise from the accent.
+      const src = entry && entry.data && entry.data.source_analysis;
+      if (src && Array.isArray(src.dominant_colors) && src.dominant_colors.length) {
+        return src.dominant_colors.slice(0, 5);
+      }
+      return ['#f5c518', '#ffd966', '#888888', '#26262d', '#050509'];
+    }
+
+    function _applyMockupTextures(stage, buttons, panelEntry, checkboxEntry, progressEntry) {
+      // Panel border-image — pulled from the panel entry's 'normal' state.
+      if (panelEntry && panelEntry.data.variants && panelEntry.data.variants.normal) {
+        stage.style.setProperty('--mockup-panel', `url('${panelEntry.data.variants.normal}')`);
+      }
+      // Checkbox states.
+      if (checkboxEntry && checkboxEntry.data.variants) {
+        const v = checkboxEntry.data.variants;
+        if (v.unchecked) stage.style.setProperty('--mockup-check-unchecked', `url('${v.unchecked}')`);
+        if (v.checked)   stage.style.setProperty('--mockup-check-checked',   `url('${v.checked}')`);
+      }
+      // Progress bar — empty frame + full fill.
+      if (progressEntry && progressEntry.data.variants) {
+        const v = progressEntry.data.variants;
+        if (v.empty) stage.style.setProperty('--mockup-progress-empty', `url('${v.empty}')`);
+        if (v.full)  stage.style.setProperty('--mockup-progress-full',  `url('${v.full}')`);
+      }
+      // Pixel-art flag carries through from whichever entry is active.
+      const anyPixel = [buttons[0], panelEntry, checkboxEntry, progressEntry]
+        .filter(Boolean).some(e => e.data && e.data.is_pixel_art);
+      document.body.classList.toggle('pixel-art', anyPixel);
     }
   </script>
 </body>
