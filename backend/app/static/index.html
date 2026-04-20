@@ -287,6 +287,62 @@
     .variant-banner.active { display: block; }
     .variant-banner .mono { color: var(--fg); }
 
+    /* Session history — thumbnails of past generations in this session */
+    .session-history {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .session-history-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .session-history-count { color: var(--faint); font-size: 11px; }
+    .session-history-strip {
+      display: flex; gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+    .session-history-strip::-webkit-scrollbar { height: 6px; }
+    .session-history-strip::-webkit-scrollbar-thumb { background: var(--line-strong); }
+    .history-thumb {
+      flex: 0 0 auto;
+      width: 72px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 0;
+      color: var(--muted);
+      display: flex; flex-direction: column;
+      transition: border-color .15s, color .15s;
+    }
+    .history-thumb:hover { border-color: var(--muted); color: var(--fg); }
+    .history-thumb.active {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+    .history-thumb .thumb-img {
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#101010 0% 25%, #161616 0% 50%) 50% / 8px 8px;
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+    .history-thumb .thumb-img img { max-width: 85%; max-height: 85%; display: block; }
+    .pixel-art .history-thumb .thumb-img img {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+    }
+    .history-thumb .thumb-label {
+      padding: 4px 6px;
+      font-size: 10px;
+      border-top: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .history-thumb.active .thumb-label { color: var(--accent); }
+
     /* Error */
     .error-box {
       border: 1px solid var(--line-strong);
@@ -425,6 +481,16 @@
 
     <!-- results -->
     <section id="step-results" class="step">
+
+      <!-- Session history: thumbnails of previous generations in this session -->
+      <div id="session-history" class="session-history" style="display:none">
+        <div class="session-history-header">
+          <span class="eyebrow">this session</span>
+          <span class="session-history-count mono" id="session-history-count">0</span>
+        </div>
+        <div class="session-history-strip" id="session-history-strip"></div>
+      </div>
+
       <div class="eyebrow">done</div>
       <h1 id="results-title">Component ready.</h1>
       <p class="lede" id="results-lede">Here are the states. The widget below is real &mdash; try it.</p>
@@ -595,7 +661,77 @@
     };
 
     const steps = ['upload', 'configure', 'generating', 'results', 'error'];
-    const state = { file: null, componentType: 'button', result: null, elapsedTimer: null };
+    const state = { file: null, componentType: 'button', result: null, elapsedTimer: null, historyId: null };
+
+    // --- session history ------------------------------------------------------
+    // In-memory only. Lost on refresh; acceptable for a demo session.
+    const sessionHistory = [];
+    let _historySeq = 0;
+
+    function _historyLabelFor(componentType) {
+      const count = sessionHistory.filter(e => e.type === componentType).length + 1;
+      const n = String(count).padStart(2, '0');
+      return `${componentType} · ${n}`;
+    }
+
+    function pushHistory(file, componentType, data, labelOverride) {
+      const id = `h${++_historySeq}`;
+      sessionHistory.push({
+        id,
+        type: componentType,
+        label: labelOverride || _historyLabelFor(componentType),
+        source: data.source,   // data URL — thumbnail
+        file,                  // File object — for re-POSTing if needed
+        data,                  // full /preview or /variant response
+        created: Date.now(),
+      });
+      state.historyId = id;
+      renderSessionHistory();
+    }
+
+    // Convert a data URL (as returned from /preview or /variant) into a File,
+    // so we can re-POST it as the source image for a new variant request.
+    function dataUrlToFile(dataUrl, filename) {
+      const [header, base64] = dataUrl.split(',');
+      const mime = (header.match(/:(.*?);/) || [,'image/png'])[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new File([bytes], filename, { type: mime });
+    }
+
+    function renderSessionHistory() {
+      const root = document.getElementById('session-history');
+      const strip = document.getElementById('session-history-strip');
+      if (sessionHistory.length === 0) { root.style.display = 'none'; return; }
+      root.style.display = '';
+      document.getElementById('session-history-count').textContent = sessionHistory.length;
+      strip.innerHTML = '';
+      // Most recent first.
+      for (let i = sessionHistory.length - 1; i >= 0; i--) {
+        const entry = sessionHistory[i];
+        const btn = document.createElement('button');
+        btn.className = 'history-thumb' + (state.historyId === entry.id ? ' active' : '');
+        btn.title = entry.label;
+        btn.innerHTML = `
+          <div class="thumb-img"><img src="${entry.source}" alt="${entry.label}" /></div>
+          <span class="thumb-label mono">${entry.label}</span>`;
+        btn.addEventListener('click', () => loadFromHistory(entry.id));
+        strip.appendChild(btn);
+      }
+    }
+
+    function loadFromHistory(id) {
+      const entry = sessionHistory.find(e => e.id === id);
+      if (!entry) return;
+      state.file = entry.file;
+      state.componentType = entry.type;
+      state.result = entry.data;
+      state.historyId = id;
+      renderResults(entry.data);
+      show('results');
+      renderSessionHistory();   // refresh the active highlight
+    }
 
     function show(step) {
       steps.forEach(s => document.getElementById('step-' + s).classList.toggle('active', s === step));
@@ -682,6 +818,7 @@
         const data = await res.json();
         state.result = data;
         clearInterval(state.elapsedTimer);
+        pushHistory(state.file, state.componentType, data);
         renderResults(data);
         show('results');
       } catch (err) {
@@ -851,7 +988,12 @@
     });
 
     document.getElementById('btn-restart').addEventListener('click', () => {
-      state.file = null; state.result = null; fileInput.value = '';
+      // 'Start over' returns to the upload step but KEEPS session history —
+      // the strip carries forward so the user can come back to earlier work.
+      state.file = null;
+      state.result = null;
+      state.historyId = null;
+      fileInput.value = '';
       document.getElementById('variant-banner').classList.remove('active');
       document.getElementById('variant-input').value = '';
       show('upload');
@@ -900,6 +1042,14 @@
         document.getElementById('variant-banner-text').textContent = data.modification || text;
         document.getElementById('variant-banner').classList.add('active');
         document.getElementById('variant-input').value = '';
+
+        // The variant's modified source becomes the active File so that a
+        // subsequent variant modifies THIS variant, not the original. Push to
+        // session history with the modification as the label.
+        const modifiedFile = dataUrlToFile(data.source, `variant_${Date.now()}.png`);
+        state.file = modifiedFile;
+        const label = `${state.componentType} · ${(data.modification || text).slice(0, 24)}`;
+        pushHistory(modifiedFile, state.componentType, data, label);
 
         renderResults(data);
         show('results');
