@@ -49,8 +49,20 @@ PIXEL_ART_MAX_DIMENSION = 128
 def normalize_variants(
     variants: dict[str, bytes],
     source_png: bytes | None = None,
+    use_source_dims: bool = True,
 ) -> dict[str, bytes]:
-    """Return trimmed, fitted, optionally palette-snapped PNG bytes per state."""
+    """Return trimmed, fitted, optionally palette-snapped PNG bytes per state.
+
+    `use_source_dims` controls whether source_png drives the target canvas:
+      - True (default): source dims govern — all variants get force-resized
+        to match. Right for /preview, /variant — the user uploaded the
+        canonical size.
+      - False: use the max bbox across the variants themselves. Right for
+        two-pass kit generation, where target components have their own
+        natural aspect ratios (a progress_bar is 7:1, not whatever the
+        uploaded checkbox happened to be). `source_png` is still used for
+        pixel-art detection and palette snapping when given.
+    """
     if not variants:
         return {}
 
@@ -63,6 +75,8 @@ def normalize_variants(
     if source_png is not None:
         source_img = Image.open(io.BytesIO(source_png)).convert("RGBA")
         is_pixel = _looks_like_pixel_art(source_img)
+
+    if use_source_dims and source_img is not None:
         source_trimmed = _alpha_trim(source_img)
         target_w, target_h = source_trimmed.size
     else:

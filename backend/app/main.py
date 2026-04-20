@@ -334,17 +334,26 @@ def _run_kit_pipeline(
             source_png=raw,
             component_type=target_component_type,
         )
+        # Do NOT constrain kit variants to the source's dimensions — a
+        # progress_bar (7:1) rendered against a checkbox source (1:1) would
+        # get force-squished into a square. Let each target keep its own
+        # natural aspect ratio from the canonical. source_png still drives
+        # pixel-art detection / palette snapping.
+        cleaned = cleanup.normalize_variants(
+            variants, source_png=raw, use_source_dims=False,
+        )
     else:
         # Single-pass pure style transfer — user explicitly opted out of
         # shape guidance, so they want the family to copy the source's
-        # silhouette (the 'quirky family' mode).
+        # silhouette (the 'quirky family' mode). Source dims still apply
+        # because the output IS expected to match the source's shape.
         variants = gen.generate_variants(
             source_png=raw,
             component_type=target_component_type,
             kit_mode=True,
             shape_guidance=False,
         )
-    cleaned = cleanup.normalize_variants(variants, source_png=raw)
+        cleaned = cleanup.normalize_variants(variants, source_png=raw)
     out_dir = godot.emit_component(
         component_type=target_component_type,
         variants=cleaned,
