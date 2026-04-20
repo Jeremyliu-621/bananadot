@@ -34,21 +34,23 @@ game loop.
 
 - [x] Spawn worktree `livedemo` from poster tip
 - [x] Boot server on :8008
-- [ ] CSS for live-demo scene (background, score/health panels,
-  clickable button, pause toggle, game-over overlay)
-- [ ] HTML: launcher button on results + new `step-livedemo` section
-- [ ] JS: game state machine + requestAnimationFrame loop for health
-  drain; click increments score and dings health; pause freezes the
-  loop; game-over blocks clicks.
-- [ ] Uses `sessionHistory` to grab a button (required), panel
-  (optional), checkbox (optional), progress_bar (optional). Falls back
-  to CSS-placeholder UI when a type is missing.
-- [ ] Commit under Jeremy.
-- [ ] Verify at :8008 — upload a button, optionally generate the
-  matching kit, click "Play live demo", click button repeatedly,
-  confirm health drains, game over fires, play-again resets.
+- [x] CSS for the stage, score panel, health bar, pause checkbox,
+  button, click-FX float-up, game-over overlay, empty state, launcher.
+- [x] HTML: launcher on results + `step-livedemo` section with a
+  host div that JS builds into the game stage (so resets are easy).
+- [x] JS: state machine (`_ld.running`/paused/score/health), rAF
+  loop with dt-capped-at-100ms, click handler (+1 score, −1.5 HP,
+  float-up "+1" fx), pause toggle, game-over overlay, play-again.
+- [x] sessionHistory wiring — button required; panel, checkbox,
+  progress_bar optional; graceful placeholders for missing types.
+- [x] Exit handler cancels the rAF when user clicks "Back".
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8008 — upload any button,
+  optionally generate the kit, click "Play live demo", click the big
+  button repeatedly, confirm score ticks, HP drains, game-over
+  overlay fires, "Play again" resets.
 
-<!-- resume here: add CSS for .livedemo-stage, .livedemo-score, .livedemo-health, .livedemo-button, .livedemo-pause. Use CSS custom props (--ld-*) for the session textures so JS sets them once per entry. -->
+<!-- resume here: user smoke-test on :8008 when awake. If it feels good, cherry-pick 17d631b into kit-batch. Polish knobs: (1) combo counter + multiplier, (2) keyboard space to click, (3) high-score banner that persists via localStorage, (4) a tiny particle shower on click, (5) shorten drain in pixel-art games and lengthen for vector so games-by-style get their own pacing. -->
 
 ### Review
 
