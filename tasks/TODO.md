@@ -134,30 +134,59 @@ Both features need **real progress bars** driven by server-sent events
 
 ### Phase 5 — multi-variant batch frontend
 
-- [ ] When user hits "Generate variant", instead of going straight to
-  the full-pipeline variant, call `/variant/options` first with
-  `count=3`.
-- [ ] Picker UI: grid of 3 thumbnails, each hoverable, with a
-  "Use this one" button below.
-- [ ] On pick: feed the chosen image into the existing `/preview` flow
-  (treat it as a new source, pushes to session history normally).
-- [ ] Progress bars during option generation (3 bars, one per option).
+- [x] "Generate variant" now calls `/variant/options` first with
+  `count=3` (const `VARIANT_OPTION_COUNT` in index.html).
+- [x] Picker UI: 3 option-slots in a grid. Each has a spinner, then a
+  thumbnail + "Use this one" button once `option_completed` arrives.
+- [x] On pick: `pickVariantOption(dataUrl, modification)` turns the
+  chosen data URL into a File, POSTs to `/preview`, and feeds the
+  result through renderResults + session history.
+- [x] Per-option pending/done/failed states via CSS classes on the
+  slot. `batch_done` and `option_failed` handled.
 
 ### Phase 6 — verification + polish
 
-- [ ] Real-image smoke test: upload a button, click "Generate kit",
-  verify all four components generate with coherent style. Inspect by eye.
-- [ ] Repeat with a checkbox as the source — kit should still produce
-  the other three types in a matching style.
-- [ ] Variant batch smoke test: type a modification, see three options,
-  pick one, confirm the state pipeline runs on the picked image.
-- [ ] Error handling: if a kit component fails, the UI should show the
-  failure on that row without killing the rest.
-- [ ] Update `tasks/lessons.md` with any patterns learned (especially
-  around SSE + FastAPI, Gemini batch calling, style transfer prompt
-  shape).
-- [ ] Commit messages use `--author="Jeremyliu-621 <jeremyliu621@gmail.com>"`
-  on every commit (do NOT touch `git config`).
+- [ ] **Blocked on user:** real-image smoke test of `/kit` with a
+  button source → verify panel/checkbox/progress_bar all come out
+  in the same visual style. Inspect by eye.
+- [ ] **Blocked on user:** same with a checkbox source.
+- [ ] **Blocked on user:** variant batch smoke test — type a
+  modification, see three options, pick one, confirm the state
+  pipeline runs on the picked image.
+- [x] Error-handling review (code): `_kit_event_stream` and
+  `_variant_options_stream` both wrap each Gemini call in try/except
+  and emit `*_failed` events instead of killing the whole stream.
+  `_read_upload` rejects empty uploads + missing API key.
+- [x] Lessons captured: SSE pattern, 3-image role separation,
+  revert-the-revert strategy, uvicorn --reload caveats on Windows.
+- [x] Commit messages authored as `Jeremyliu-621
+  <jeremyliu621@gmail.com>` via `-c user.name/user.email` +
+  `--author=` on every commit. Git config itself untouched.
+
+### Handoff for when Jeremy wakes up
+
+Live servers:
+- `:8000` — worktree-demo-both (safe, normal = passthrough)
+- `:8001` — worktree-normal-regenerate (preferred, normal = regen)
+- `:8002` — worktree-kit-batch (this initiative — all of :8001 plus
+  /kit, /variant/options, kit UI, batch picker UI)
+
+To smoke test on :8002:
+1. Hard-refresh the page
+2. Upload any button/panel/checkbox/progress_bar
+3. Click "Generate variant" — should see 3 option slots filling in
+   one at a time (SSE working)
+4. Click "Use this one" on any — should run /preview on that pick,
+   land back in a normal results view, session history updated
+5. Click "Generate matching kit" — should see 3 progress rows, one
+   per target component type, filling sequentially
+6. Each kit member gets its own download button when it completes
+
+What's NOT built:
+- `/kit/bundle` single-zip download. Per-member zip downloads are in
+  place — assemble-as-one is still nice-to-have.
+- Automated smoke test (mocked Gemini). Would catch event-sequence
+  regressions without burning real API credits. Low priority.
 
 <!-- resume here: Phase 6 — real-image smoke tests. :8002 is serving kit-batch. Three human-tested flows to confirm: (a) upload a pixel-art button, click 'Generate matching kit', verify 3 SSE progress rows fill and 3 kit-member cards render with coherent style. (b) type 'change label to STOP' in the variant box, verify 3 options appear + picking one runs the state pipeline + banner + history. (c) error path: intentionally break the Gemini key, confirm a component_failed / option_failed row renders red with the error tooltip. After eyeballing all three, mark initiative complete and archive this TODO. -->
 
