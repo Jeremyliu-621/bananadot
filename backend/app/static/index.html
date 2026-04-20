@@ -708,6 +708,161 @@
       padding: 24px;
     }
 
+    /* Tab bar — Pause / HUD / Title */
+    .mockup-tabs {
+      display: flex;
+      gap: 2px;
+      max-width: 1000px;
+      margin: 0 auto 16px;
+    }
+    .mockup-tab {
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-bottom-color: var(--line-strong);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .mockup-tab:hover { color: var(--fg); border-color: var(--muted); }
+    .mockup-tab.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(245, 197, 24, 0.05);
+    }
+
+    /* HUD layout */
+    .layout-hud { grid-template-rows: auto 1fr auto; }
+    .hud-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 18px;
+    }
+    .hud-health {
+      display: flex; flex-direction: column; gap: 4px;
+      flex: 0 0 260px;
+    }
+    .hud-health .hud-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--fg);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .hud-health .hud-bar {
+      height: 14px;
+      position: relative;
+      background-color: rgba(255,255,255,0.03);
+      background-image: var(--mockup-progress-empty);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+    .hud-health .hud-bar-fill {
+      position: absolute; inset: 0;
+      background-image: var(--mockup-progress-full, linear-gradient(90deg, #ff5c5c, #ff8a8a));
+      background-size: auto 100%;
+      clip-path: inset(0 28% 0 0);
+    }
+    .pixel-art .hud-health .hud-bar,
+    .pixel-art .hud-health .hud-bar-fill {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .mockup-panel-inline {
+      padding: 10px 14px;
+      background-color: rgba(16, 16, 20, 0.72);
+      border: 1px solid var(--line-strong);
+      border-image-source: var(--mockup-panel, none);
+      border-image-slice: 25% fill;
+      border-image-repeat: stretch;
+      border-image-width: 14px;
+      color: var(--fg);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pixel-art .mockup-panel-inline {
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
+
+    .hud-score b {
+      color: var(--accent);
+      margin-left: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .hud-center {
+      display: grid; place-items: center;
+      color: rgba(245, 197, 24, 0.45);
+      font-size: 36px; font-family: monospace;
+      user-select: none;
+    }
+    .hud-bottom {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: 18px;
+    }
+    .hud-abilities { display: flex; gap: 8px; }
+    .hud-ability {
+      width: 56px; min-height: 56px;
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .hud-ability .hotkey {
+      position: absolute;
+      bottom: -14px; right: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--accent);
+      background: rgba(0,0,0,0.6);
+      padding: 1px 5px;
+      border: 1px solid var(--accent);
+    }
+    .hud-minimap {
+      min-width: 120px;
+      min-height: 80px;
+      display: grid; place-items: center;
+      text-align: center;
+    }
+    .hud-minimap .minimap-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-top: 6px;
+    }
+
+    /* Title-screen layout */
+    .layout-title { grid-template-rows: 1fr auto 1fr; }
+    .title-spacer { }
+    .title-center {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 20px;
+    }
+    .title-brand {
+      font-size: 44px; font-weight: 700; letter-spacing: 0.03em;
+      color: var(--fg);
+      text-shadow: 0 0 28px rgba(245, 197, 24, 0.3);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .title-tagline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em;
+      color: var(--muted);
+    }
+    .title-start {
+      width: 220px; min-height: 56px;
+      margin-top: 4px;
+    }
+    .title-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.15em;
+    }
+
     /* Section for the "See in a game screen" launcher button */
     .mockup-launcher-section {
       margin-top: 40px;
@@ -923,8 +1078,14 @@
         <button id="btn-mockup-back" class="btn btn-ghost">&larr; Back to results</button>
       </div>
 
+      <div class="mockup-tabs" id="mockup-tabs">
+        <button class="mockup-tab active" data-layout="pause">Pause Menu</button>
+        <button class="mockup-tab" data-layout="hud">HUD</button>
+        <button class="mockup-tab" data-layout="title">Title Screen</button>
+      </div>
+
       <div id="mockup-stage-host">
-        <!-- populated by openMockup() -->
+        <!-- populated by renderMockupTab(layoutKey) -->
       </div>
     </section>
 
@@ -1660,11 +1821,28 @@
       return out;
     }
 
+    // Layout registry — each builder receives the gathered history entries
+    // and returns a DOM stage. Add new layouts here + a tab in the HTML.
+    const MOCKUP_LAYOUTS = {
+      pause: _layoutPauseMenu,
+      hud:   _layoutHUD,
+      title: _layoutTitle,
+    };
+
     function openMockup() {
+      // Respect any previously-picked tab; otherwise default to pause.
+      renderMockupTab(state.mockupLayout || 'pause');
+    }
+
+    function renderMockupTab(layoutKey) {
+      state.mockupLayout = layoutKey;
+
       const stageHost = document.getElementById('mockup-stage-host');
       stageHost.innerHTML = '';
 
-      // If nothing in history at all, show an empty-state prompt.
+      _syncMockupTabs(layoutKey);
+
+      // Empty session → polite prompt, same across layouts.
       if (sessionHistory.length === 0) {
         stageHost.innerHTML = `
           <div class="mockup-stage" style="display:block">
@@ -1678,33 +1856,127 @@
         return;
       }
 
-      const buttons = _latestButtons(3);
-      const panel = _latestHistory('panel');
-      const checkbox = _latestHistory('checkbox');
-      const progress = _latestHistory('progress_bar');
+      const entries = _gatherHistoryEntries();
+      const builder = MOCKUP_LAYOUTS[layoutKey] || MOCKUP_LAYOUTS.pause;
+      const stage = builder(entries);
+      _applyMockupTextures(stage, entries.buttons, entries.panel, entries.checkbox, entries.progress);
+      stageHost.appendChild(stage);
 
-      // Menu labels — cosmetic placeholder overlay since buttons carry their
-      // baked-in text already. For variants we don't know the label; use
-      // history-index-based labels as a best guess.
+      show('mockup');
+    }
+
+    // Wire tab clicks once on load. (Mockup step is guaranteed rendered.)
+    document.querySelectorAll('.mockup-tab').forEach(tab => {
+      tab.addEventListener('click', () => renderMockupTab(tab.dataset.layout));
+    });
+
+    function _syncMockupTabs(layoutKey) {
+      document.querySelectorAll('.mockup-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.layout === layoutKey);
+      });
+    }
+
+    function _gatherHistoryEntries() {
+      return {
+        buttons:  _latestButtons(3),
+        panel:    _latestHistory('panel'),
+        checkbox: _latestHistory('checkbox'),
+        progress: _latestHistory('progress_bar'),
+      };
+    }
+
+    // --- layout: pause menu (original) --------------------------------------
+    function _layoutPauseMenu(entries) {
+      const { buttons, panel, checkbox, progress } = entries;
       const menuLabels = ['Start', 'Options', 'Quit'];
 
       const stage = document.createElement('div');
-      stage.className = 'mockup-stage';
-
-      // Top strip: progress or a thin accent bar
+      stage.className = 'mockup-stage layout-pause';
       stage.appendChild(_mockupTopStrip(progress));
-      // Center: panel-framed menu
       stage.appendChild(_mockupCenter(panel, buttons, menuLabels, checkbox));
-      // Bottom strip: palette swatches + caption
       stage.appendChild(_mockupBottomStrip(buttons[0] || panel || checkbox || progress));
+      return stage;
+    }
 
-      // Hook custom properties per component: menu buttons get the first
-      // button's textures by default; individual buttons with their own
-      // history entries override those.
-      _applyMockupTextures(stage, buttons, panel, checkbox, progress);
+    // --- layout: HUD --------------------------------------------------------
+    function _layoutHUD(entries) {
+      const { buttons, panel, checkbox, progress } = entries;
 
-      stageHost.appendChild(stage);
-      show('mockup');
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage layout-hud';
+      stage.innerHTML = `
+        <div class="hud-top">
+          <div class="hud-health">
+            <span class="hud-label">HP  72 / 100</span>
+            <div class="hud-bar"><div class="hud-bar-fill"></div></div>
+          </div>
+          <div class="hud-score mockup-panel-inline">Score <b>01 234</b></div>
+        </div>
+        <div class="hud-center"><span>+</span></div>
+        <div class="hud-bottom">
+          <div class="hud-abilities"></div>
+          <div class="hud-minimap mockup-panel-inline">
+            <div>Minimap</div>
+            <div class="minimap-dot"></div>
+          </div>
+        </div>
+      `;
+
+      // Ability buttons: use up to 3 different button history entries if
+      // available, each with hotkey badge.
+      const hotkeys = ['Q', 'W', 'E'];
+      const abilities = stage.querySelector('.hud-abilities');
+      for (let i = 0; i < 3; i++) {
+        const entry = buttons[i] || buttons[0] || null;
+        const btn = document.createElement('button');
+        btn.className = entry ? 'mockup-menu-btn hud-ability' : 'mockup-menu-btn hud-ability placeholder';
+        btn.innerHTML = `<span class="hotkey">${hotkeys[i]}</span>`;
+        if (entry) {
+          const v = entry.data.variants || {};
+          if (v.normal)   btn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+          if (v.hover)    btn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+          if (v.pressed)  btn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+          if (v.disabled) btn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+        }
+        btn.addEventListener('click', (e) => e.preventDefault());
+        abilities.appendChild(btn);
+      }
+
+      return stage;
+    }
+
+    // --- layout: title screen -----------------------------------------------
+    function _layoutTitle(entries) {
+      const { buttons } = entries;
+      const anyBtn = buttons[0];
+
+      const stage = document.createElement('div');
+      stage.className = 'mockup-stage layout-title';
+      stage.innerHTML = `
+        <div class="title-spacer"></div>
+        <div class="title-center">
+          <div class="title-brand">BANANADOT ARCADE</div>
+          <div class="title-tagline">press start to begin</div>
+          <button class="mockup-menu-btn title-start${anyBtn ? '' : ' placeholder'}">
+            <span class="label">START</span>
+          </button>
+        </div>
+        <div class="title-footer">
+          <span>v1.0.0</span>
+          <span>&copy; bananadot studio</span>
+        </div>
+      `;
+
+      if (anyBtn) {
+        const startBtn = stage.querySelector('.title-start');
+        const v = anyBtn.data.variants || {};
+        if (v.normal)   startBtn.style.setProperty('--mockup-btn-normal',   `url('${v.normal}')`);
+        if (v.hover)    startBtn.style.setProperty('--mockup-btn-hover',    `url('${v.hover}')`);
+        if (v.pressed)  startBtn.style.setProperty('--mockup-btn-pressed',  `url('${v.pressed}')`);
+        if (v.disabled) startBtn.style.setProperty('--mockup-btn-disabled', `url('${v.disabled}')`);
+      }
+
+      return stage;
     }
 
     function _mockupTopStrip(progressEntry) {
