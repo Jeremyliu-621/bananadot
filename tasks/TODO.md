@@ -26,23 +26,20 @@ menu."
 
 - [x] Spawn worktree `mockup-layouts` from `worktree-mockup` tip
 - [x] Boot server on :8004
-- [ ] Refactor `openMockup()` / `_mockupCenter()` pattern so each
-  layout lives in its own builder function — `_layoutPauseMenu()` is
-  existing; add `_layoutHUD()` and `_layoutTitle()` as siblings.
-- [ ] Add tab bar at the top of the mockup step. Click = switch
-  active layout; session history is stored separately from the stage
-  DOM so re-rendering is cheap.
-- [ ] HUD layout: top-left health bar (panel+progress), top-right
-  score panel with dummy number, bottom-row ability buttons
-  (3 buttons), optional inventory slot (checkbox?).
-- [ ] Title layout: big title + tagline, single Start button centred,
-  a small version string using progress bar as a seed spinner (low
-  priority if time-constrained).
-- [ ] Verify at :8004 — upload any component, click mockup, tab
-  through all three layouts, confirm textures render per-layout.
-- [ ] Commit each layout separately under Jeremy.
+- [x] Refactor `openMockup()` → `renderMockupTab(key)` dispatcher +
+  `MOCKUP_LAYOUTS` registry. Pause menu renamed as `_layoutPauseMenu`.
+- [x] Tab bar above stage host. Click handler sets `state.mockupLayout`
+  (sticky across back/forth) and re-renders.
+- [x] HUD layout: health bar (top-left), score panel (top-right),
+  centre crosshair, ability buttons row (bottom-left with Q/W/E hotkey
+  badges), minimap card (bottom-right).
+- [x] Title layout: title + tagline + full-width START button + footer.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8004 — upload any
+  component, click "See in a game screen", click between the three
+  tabs, confirm each scene renders with the right textures.
 
-<!-- resume here: refactor openMockup to dispatch on a current-tab state. Create const LAYOUTS = {'pause': _layoutPauseMenu, 'hud': _layoutHUD, 'title': _layoutTitle}. Add tab-bar HTML above the stage host. Click handler sets state.mockupLayout and re-renders. -->
+<!-- resume here: user visual-test on :8004 when awake. If layouts look good, cherry-pick c3e960f into kit-batch. If a layout feels weak, obvious polish knobs: (1) HUD: make the health-bar fill animated (CSS keyframes slowly draining), (2) Title: animate the START button with a slow pulse, (3) Pause: add a small 'CONTINUE' indicator at the bottom. -->
 
 ### Review
 
