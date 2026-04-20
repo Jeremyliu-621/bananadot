@@ -159,7 +159,7 @@ Both features need **real progress bars** driven by server-sent events
 - [ ] Commit messages use `--author="Jeremyliu-621 <jeremyliu621@gmail.com>"`
   on every commit (do NOT touch `git config`).
 
-<!-- resume here: Phase 5 — batch picker frontend. Intercept the "Generate variant" click so it calls /variant/options (count=3) FIRST and shows a picker UI with 3 thumbnails + progress bars. User clicks "Use this one" on a candidate, which becomes the source for the existing state-pipeline path (POST /preview with the picked image). Progress bars fill from SSE events. Hide the current straight-to-variant path behind a "single option" checkbox if easy; otherwise just replace the flow. -->
+<!-- resume here: Phase 6 — real-image smoke tests. :8002 is serving kit-batch. Three human-tested flows to confirm: (a) upload a pixel-art button, click 'Generate matching kit', verify 3 SSE progress rows fill and 3 kit-member cards render with coherent style. (b) type 'change label to STOP' in the variant box, verify 3 options appear + picking one runs the state pipeline + banner + history. (c) error path: intentionally break the Gemini key, confirm a component_failed / option_failed row renders red with the error tooltip. After eyeballing all three, mark initiative complete and archive this TODO. -->
 
 ### Review
 
