@@ -29,23 +29,23 @@ across Firefox, Chrome, Safari, Edge.
 
 - [x] Spawn worktree `remix` from livedemo tip
 - [x] Boot server on :8009
-- [ ] CSS for remix-section, remix-stage, remix-controls (sliders)
-- [ ] HTML: launcher on results + `step-remix` with entry picker,
-  preview img, hue/saturation/brightness sliders with numeric readouts,
-  "save as new variant" button, "back"
-- [ ] JS: openRemix() populates picker, shows most-recent entry.
-  Slider handlers update preview `<img>` element's inline
-  `style.filter` live. Save button: for each variant key, load source
-  → draw to Canvas with filter → toDataURL. Assemble a new data
-  object matching the /preview response shape, push to sessionHistory
-  with a filter-readout label ("+120° · 1.2×").
-- [ ] Empty state when sessionHistory is empty.
-- [ ] Commit under Jeremy.
-- [ ] Verify at :8009 — upload a component, click Recolor, move
-  sliders, hit Save, see the new entry appear in the session strip
-  back on the results page.
+- [x] CSS: remix-section, remix-stage, remix-layout grid, sliders,
+  actions, state chips, empty state, launcher.
+- [x] HTML: launcher + `step-remix` with header + body host (built by
+  JS so empty state is easy) + state-chip row.
+- [x] JS: `openRemix()` populates entry picker and sliders; live
+  preview uses inline `style.filter`. State chips let user preview on
+  any specific variant key. `_saveRemix()` bakes filters into all
+  variant keys via Canvas 2D `ctx.filter` + `toDataURL`, pushes a new
+  sessionHistory entry with a filter-readout label.
+- [x] Empty-state when sessionHistory is empty.
+- [x] Committed under Jeremy.
+- [ ] **Blocked on user:** visual verify at :8009 — upload any
+  component, click Recolor, drag the hue slider, hit Save, go back to
+  results, confirm the new remix entry appears in the session strip
+  and in the mockup/playground/etc views.
 
-<!-- resume here: start with CSS for the stage + a slider control row. Inline filter on the preview image uses `style.filter = ...`. Save button creates a NEW sessionHistory entry with baked-in colors, so the user can then use the recolored version in mockup / playground / compare / poster / livedemo. -->
+<!-- resume here: user smoke-test on :8009 when awake. Polish knobs if he wants more: (1) preset chip row (warm / cool / mono / inverse / pastel), (2) per-color swap (click a dominant-color swatch → picker opens → per-pixel remap via canvas pixel iteration for pixel-art entries), (3) hue/sat animated over time as a looping showcase, (4) Ctrl+Z / Ctrl+Shift+Z to step through slider changes. -->
 
 ### Review
 
