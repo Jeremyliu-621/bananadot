@@ -80,44 +80,40 @@ Both features need **real progress bars** driven by server-sent events
 
 - [x] Create worktree `kit-batch` from `worktree-demo-both` tip
 - [x] Archive old TODO; write this one
-- [ ] Boot the existing demo-both server pattern on port 8002 for this
+- [x] Boot the existing demo-both server pattern on port 8002 for this
   branch; verify baseline (pre-feature) works
 
 ### Phase 2 — kit generation backend
 
-- [ ] Add `style_reference_png` param to `generate.generate_variants`.
-  When present: include a third `types.Part.from_bytes` in each Gemini
-  call, add a `STYLE_FAMILY_REFERENCE` block to the prompt's JSON payload
-  with explicit `use_for`/`must_not_extract` lists that separate "style"
-  from "shape/subject".
-- [ ] Offline-test: pass a button source as `style_reference_png` when
-  generating a checkbox; confirm no regression on the normal button
-  flow (style_reference=None).
-- [ ] New `/kit` endpoint in `main.py`. Accepts `image` + `source_component_type`.
-  Computes the three target types, runs the pipeline for each with the
-  source as style reference, returns a JSON bundle (all components, all
-  states, all zip bundles).
-- [ ] Stream SSE events during the run — one component at a time, sequential
-  (parallel wastes Gemini quota if any fail). Emit
-  `component_started` → do the work → emit `component_completed` with
-  the variants payload for just that component. Final event is
-  `kit_done`.
-- [ ] Hit the endpoint manually via curl with a real image; confirm the
-  event stream works end-to-end.
+- [x] Add `style_reference_png` param to `generate.generate_variants`.
+  Refactored reference-collection so each call can carry 1/2/3 images
+  in a consistent order (source / anchor / style-family).
+- [x] Offline-test: verified preamble shape with 1/2/3 images + all
+  combinations. No regression path when `style_reference=None`.
+- [x] New `/kit` endpoint in `main.py`. Accepts `image` +
+  `source_component_type`. Computes the three targets, runs the pipeline
+  for each with the source as style reference. Uses `asyncio.to_thread`
+  so blocking Gemini calls don't stall the SSE event loop.
+- [x] SSE event stream: `kit_started`, `component_started`,
+  `component_completed`, `component_failed`, `kit_done`. Targets run
+  sequentially so a single Gemini failure doesn't cascade.
+- [x] Verified `/kit` is registered on live server (/openapi.json shows
+  it). Full end-to-end smoke test with a real image still pending —
+  Phase 6 will cover this.
 
 ### Phase 3 — kit generation frontend
 
-- [ ] New "Generate matching kit" button on the results step (only visible
-  after a component has been generated).
-- [ ] Progress UI: a tall card with four progress rows (one per component
-  type), each with a label + bar. Current component fills 0 → 100%,
-  others stay pending; completed ones show a green check.
-- [ ] On receiving `component_completed`, append a result section to the
-  results page under a "Kit" tab or below the current variants grid.
-- [ ] Each generated kit member gets its own download button.
-- [ ] Final `kit_done` event: summary card with a "Download all" button
-  (optional — zip the individual zips client-side, or add a
-  `/kit/bundle` endpoint that returns a single super-zip).
+- [x] "Generate matching kit" button on the results step, under the
+  variant section (below the existing 'create a variant' block).
+- [x] Progress UI: one row per target component. Pulsing bar while
+  active, solid fill on done, red fill on failure.
+- [x] On `component_completed`, appends a kit-member card with the
+  state grid + per-member download button.
+- [x] Generic SSE parser using fetch's ReadableStream (EventSource
+  doesn't support POST with multipart body).
+- [ ] 'Download all' super-zip: punted. A per-member download per
+  card is enough for v1; if the demo needs a single zip, add
+  `/kit/bundle` or assemble client-side later.
 
 ### Phase 4 — multi-variant batch backend
 
@@ -159,7 +155,7 @@ Both features need **real progress bars** driven by server-sent events
 - [ ] Commit messages use `--author="Jeremyliu-621 <jeremyliu621@gmail.com>"`
   on every commit (do NOT touch `git config`).
 
-<!-- resume here: Phase 1 final step — boot the kit-batch worktree server on port 8002 and hit /health to confirm baseline. Then start Phase 2 (style_reference_png param on generate_variants). -->
+<!-- resume here: Phase 4 — multi-variant batch backend. Extend generate.apply_modification to accept `count`, run N parallel Gemini calls via asyncio.to_thread + gather, return a list of PNG bytes. Add /variant/options SSE endpoint (batch_started / option_started / option_completed / batch_done events). Per-call prompt nudge ('(variation N of M, vary subtly)') so the three candidates aren't identical. -->
 
 ### Review
 

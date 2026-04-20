@@ -165,6 +165,84 @@ async def variant(
     )
 
 
+@app.post("/variant/options")
+async def variant_options(
+    image: UploadFile = File(..., description="Source image."),
+    component_type: ComponentType = Form(...),
+    modification: str = Form(..., description="What's different."),
+    count: int = Form(3, description="How many candidates to produce (1-4)."),
+) -> StreamingResponse:
+    """Generate N candidate modifications of the source in parallel.
+
+    Streams SSE events so each candidate's progress bar can fill
+    independently on the frontend:
+
+      batch_started      carries {count, modification}
+      option_started     one per candidate, {index}
+      option_completed   one per candidate, {index, image}
+      option_failed      {index, error}
+      batch_done         terminal event
+
+    Phase 2 of the picker flow (turning a picked candidate into a full
+    state set) is the existing /preview endpoint — the frontend POSTs
+    the picked image there.
+    """
+    raw = await _read_upload(image)
+    if not modification.strip():
+        raise HTTPException(status_code=400, detail="modification must not be empty")
+    count = max(1, min(int(count), 4))
+
+    return StreamingResponse(
+        _variant_options_stream(raw, component_type, modification, count),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _variant_options_stream(
+    raw: bytes, component_type: str, modification: str, count: int,
+) -> AsyncIterator[bytes]:
+    """Run `count` parallel apply_modification calls, emitting SSE per option."""
+    from app.pipeline import generate as gen
+
+    yield _sse("batch_started", {"count": count, "modification": modification})
+
+    # Announce all option_started up-front so the UI can lay out N rows/cards
+    # before any result comes back.
+    for i in range(count):
+        yield _sse("option_started", {"index": i})
+
+    # Fire all N Gemini calls in parallel via threadpool.
+    async def run_one(i: int) -> tuple[int, bytes | Exception]:
+        try:
+            png = await asyncio.to_thread(
+                gen.apply_modification,
+                source_png=raw,
+                modification=modification,
+                component_type=component_type,
+                variation_label=f"candidate {i + 1} of {count}",
+            )
+            return (i, png)
+        except Exception as e:
+            return (i, e)
+
+    tasks = [asyncio.create_task(run_one(i)) for i in range(count)]
+    for coro in asyncio.as_completed(tasks):
+        i, result = await coro
+        if isinstance(result, Exception):
+            yield _sse("option_failed", {
+                "index": i,
+                "error": f"{type(result).__name__}: {result}",
+            })
+        else:
+            yield _sse("option_completed", {
+                "index": i,
+                "image": _as_data_url(result),
+            })
+
+    yield _sse("batch_done", {"count": count})
+
+
 @app.post("/kit")
 async def kit(
     image: UploadFile = File(..., description="Image of an existing component to use as the style anchor."),

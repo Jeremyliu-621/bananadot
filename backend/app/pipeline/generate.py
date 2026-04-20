@@ -369,13 +369,15 @@ def apply_modification(
     source_png: bytes,
     modification: str,
     component_type: str,
+    *,
+    variation_label: str | None = None,
 ) -> bytes:
     """Apply a single text-described modification to the source image.
 
     Returns a new PNG that is 'like the source but with [modification] applied.'
-    Used as the pre-step for the /variant flow: take an existing START button,
-    modify it to read STOP, THEN feed that as the new source to the regular
-    state-variant pipeline.
+    Used as the pre-step for the /variant flow, and as the per-option worker
+    for /variant/options (batch). `variation_label`, when set, gets appended
+    to the prompt so parallel calls produce subtly different candidates.
 
     Same dimensions, same style, same everything else — only the requested
     change is applied.
@@ -385,7 +387,7 @@ def apply_modification(
     with Image.open(io.BytesIO(source_png)) as src:
         src_w, src_h = src.size
 
-    prompt = (
+    base_prompt = (
         "Reproduce the reference image EXACTLY — same art style, same colors, "
         "same frames/borders, same dimensions, same level of detail — but "
         f"apply this single modification: {modification.strip()}\n\n"
@@ -394,6 +396,12 @@ def apply_modification(
         f"modification. This is a {component_type}; preserve its overall "
         "shape and function."
     )
+    prompt = (
+        f"{base_prompt}\n\nVariation tag: {variation_label}. Introduce a small, "
+        "unique creative interpretation so this candidate differs subtly from "
+        "sibling candidates (slightly different color temperature, line weight, "
+        "or detail emphasis) while still obeying all constraints above."
+    ) if variation_label else base_prompt
 
     client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
