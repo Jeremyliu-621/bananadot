@@ -114,6 +114,51 @@ async def preview(
     )
 
 
+@app.post("/variant")
+async def variant(
+    image: UploadFile = File(..., description="Source image of an existing component."),
+    component_type: ComponentType = Form(...),
+    modification: str = Form(..., description="What's different. e.g. 'change label to STOP', 'make it red'."),
+) -> JSONResponse:
+    """Create a variant of an existing component by applying a text modification.
+
+    Two-phase pipeline:
+      1. Gemini applies the modification to the source (e.g. START -> STOP).
+      2. The modified image becomes the source for the regular /preview pipeline
+         (generate state variants, cleanup, package).
+
+    Keeps /preview untouched.
+    """
+    raw = await _read_upload(image)
+    if not modification.strip():
+        raise HTTPException(status_code=400, detail="modification must not be empty")
+
+    from app.pipeline import generate as gen
+
+    # Phase 1: apply the modification to the source.
+    modified_source = gen.apply_modification(
+        source_png=raw,
+        modification=modification,
+        component_type=component_type,
+    )
+
+    # Phase 2: run the existing pipeline with the modified image as the new source.
+    cleaned, zip_bytes, is_pixel = _run_pipeline(modified_source, component_type)
+
+    return JSONResponse(
+        {
+            "component_type": component_type,
+            "is_pixel_art": is_pixel,
+            "modification": modification,
+            "original_source": _as_data_url(raw),
+            "source": _as_data_url(modified_source),
+            "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
+            "zip_base64": base64.b64encode(zip_bytes).decode("ascii"),
+            "zip_name": f"bananadot_{component_type}_variant.zip",
+        }
+    )
+
+
 # --- helpers ------------------------------------------------------------------
 
 
