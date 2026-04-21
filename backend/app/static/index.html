@@ -1897,32 +1897,6 @@
 
       <!-- Launcher for the "See in a game screen" mockup scene -->
 
-      <div class="poster-launcher-section">
-        <div class="eyebrow">ship it</div>
-        <div class="launcher-intro">
-          Composite everything you've generated this session into a single
-          shareable PNG. Title, tile grid, palette swatches, date. The
-          artifact you post on X or drop in a deck.
-        </div>
-        <div class="kit-actions">
-          <button id="btn-poster" class="btn btn-accent">Export kit poster</button>
-          <span class="variant-hint mono">1600&times;900 PNG, composited locally, no upload</span>
-        </div>
-      </div>
-
-      <div class="livedemo-launcher-section">
-        <div class="eyebrow">play with it</div>
-        <div class="launcher-intro">
-          Tiny playable microgame wearing your real textures. Click the
-          button to score, health drains, game over, play again. Your kit
-          stops being a gallery and starts playing a role in a game loop.
-        </div>
-        <div class="kit-actions">
-          <button id="btn-livedemo" class="btn btn-accent">Play live demo</button>
-          <span class="variant-hint mono">Banana Clicker &middot; needs a button to play</span>
-        </div>
-      </div>
-
       <div class="remix-launcher-section">
         <div class="eyebrow">recolor</div>
         <div class="launcher-intro">
@@ -3483,9 +3457,11 @@
     const POSTER_H = 900;
     const POSTER_PAD = 60;
 
-    document.getElementById('btn-poster').addEventListener('click', openPoster);
-    document.getElementById('btn-poster-back').addEventListener('click', () => show('results'));
-    document.getElementById('btn-poster-download').addEventListener('click', _downloadPoster);
+    // launchers for 'Export kit poster' removed per user request; the step +
+    // openPoster() scaffolding remains as dead code but nothing on the UI
+    // reaches them anymore.
+    document.getElementById('btn-poster-back')?.addEventListener('click', () => show('results'));
+    document.getElementById('btn-poster-download')?.addEventListener('click', _downloadPoster);
 
     async function openPoster() {
       show('poster');
@@ -3691,8 +3667,8 @@
     // panel texture; health bar uses their progress_bar textures. Any
     // missing component falls back to CSS placeholder styling.
 
-    document.getElementById('btn-livedemo').addEventListener('click', openLiveDemo);
-    document.getElementById('btn-livedemo-back').addEventListener('click', _exitLiveDemo);
+    // launcher for 'Play live demo' removed per user request.
+    document.getElementById('btn-livedemo-back')?.addEventListener('click', _exitLiveDemo);
 
     // Game state — re-initialised on each openLiveDemo() and resetLiveDemo().
     const _ld = {
