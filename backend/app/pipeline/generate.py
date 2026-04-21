@@ -74,14 +74,20 @@ def generate_kit_variants(
     source_png: bytes,
     component_type: str,
 ) -> dict[str, bytes]:
-    """Two-pass kit generation.
+    """Two-pass kit generation with cross-state consistency chaining.
 
     Pass 1 — canonical generation: run the full /preview pipeline on the
     component's shape primitive (neutral grayscale). Cached on disk so we
     only pay this cost once per component type, ever.
 
-    Pass 2 — style transfer: take each canonical state and restyle it to
-    match the user's source. One Gemini call per state, image-to-image.
+    Pass 2 — style transfer: restyle each canonical to match the user's
+    source. The FIRST styled state is the consistency anchor for every
+    subsequent state — subsequent calls get that anchor as image 3 and
+    the prompt says "match image 3's rendering decisions exactly" (same
+    pattern we use inside /preview). This kills cross-state drift —
+    without it each Pass 2 call decides background/palette/line-weight
+    independently and e.g. empty ends up with a white plate while full
+    ends up transparent.
 
     The result is a dict keyed by state name, PNG bytes. Same shape as
     generate_variants so downstream cleanup/godot/bundle work unchanged.
@@ -89,13 +95,22 @@ def generate_kit_variants(
     canonicals = _load_or_build_canonicals(component_type)
 
     results: dict[str, bytes] = {}
+    anchor_png: bytes | None = None
+    anchor_state: str | None = None
+
     for state, canonical_png in canonicals.items():
-        results[state] = _apply_style_transfer(
+        styled = _apply_style_transfer(
             canonical_png=canonical_png,
             style_png=source_png,
             component_type=component_type,
             state=state,
+            anchor_png=anchor_png,
+            anchor_state=anchor_state,
         )
+        results[state] = styled
+        if anchor_png is None:
+            anchor_png = styled
+            anchor_state = state
     return results
 
 
@@ -144,41 +159,76 @@ def _apply_style_transfer(
     style_png: bytes,
     component_type: str,
     state: str,
+    anchor_png: bytes | None = None,
+    anchor_state: str | None = None,
 ) -> bytes:
     """Pass 2 — restyle a canonical component to match a style source.
 
-    Two images in, one out. The first image carries SILHOUETTE + CONTENT
-    (the canonical from Pass 1, which is already the right shape and the
-    right state). The second image carries ART STYLE (the user's source).
-    Gemini's job is just to repaint the first image in the second image's
-    style — no silhouette invention, no state reasoning.
+    Two or three images in, one out:
+      image 1 = canonical  : silhouette + state-specific content (Pass 1 output)
+      image 2 = style_png  : art style (the user's source)
+      image 3 = anchor_png : previously-styled state of the same component
+                             (None for the first state, set thereafter).
+                             Locks cross-state rendering decisions — palette,
+                             line weight, background/alpha handling, edge
+                             treatment — so all states agree with each other.
     """
     from app.main import settings
 
     with Image.open(io.BytesIO(canonical_png)) as c:
         w, h = c.size
 
-    prompt = (
-        f"Restyle the first reference image (a {component_type} in its "
-        f"'{state}' state) to match the art style of the second reference "
-        "image. Preserve the first image's silhouette, content, structural "
-        "layout, and state-specific details EXACTLY. Only change the render "
-        "language: colour palette, line weight, edge treatment, level of "
-        "detail, and texture. The second image is a different UI component "
-        "type — take its STYLE, not its shape or subject.\n\n"
-        f"The output MUST be exactly {w}x{h} pixels with a transparent "
-        "background. Keep the first image's proportions. Do not add or "
-        "remove any visible elements."
-    )
+    if anchor_png is None:
+        prompt = (
+            f"Restyle the first reference image (a {component_type} in its "
+            f"'{state}' state) to match the art style of the second reference "
+            "image. Preserve the first image's silhouette, content, structural "
+            "layout, and state-specific details EXACTLY. Only change the render "
+            "language: colour palette, line weight, edge treatment, level of "
+            "detail, and texture. The second image is a different UI component "
+            "type — take its STYLE, not its shape or subject.\n\n"
+            f"The output MUST be exactly {w}x{h} pixels. Keep the first image's "
+            "proportions and alpha behaviour. Do not add or remove any visible "
+            "elements."
+        )
+    else:
+        prompt = (
+            f"Restyle the first reference image (a {component_type} in its "
+            f"'{state}' state) to match the art style of the second reference "
+            "image, AND to be visually consistent with the third reference "
+            f"image (a previously-styled '{anchor_state}' state of the same "
+            f"{component_type}).\n\n"
+            "Image 1 (CANONICAL) — preserve its silhouette, content, structural "
+            "layout, and state-specific details EXACTLY.\n"
+            "Image 2 (STYLE SOURCE) — take ONLY art style cues from this: "
+            "colours, line weight, edge treatment, rendering technique. Do NOT "
+            "copy its shape or subject.\n"
+            "Image 3 (CONSISTENCY ANCHOR) — the previous styled state of this "
+            f"same {component_type}. Match its rendering decisions EXACTLY: "
+            "same palette, same stroke widths, same anti-aliasing behaviour, "
+            "same transparency handling (if image 3 has a transparent "
+            "background, so does the output; if it has an opaque plate, so "
+            "does the output), same edge treatment. Image 3 is the ground "
+            "truth for how image 2's style should look when applied. Do NOT "
+            "diverge from its rendering choices. The only difference between "
+            "this output and image 3 is the state-specific content from "
+            "image 1.\n\n"
+            f"The output MUST be exactly {w}x{h} pixels. Keep image 1's "
+            "proportions. Do not add or remove any visible elements."
+        )
+
+    contents: list = [
+        prompt,
+        types.Part.from_bytes(data=canonical_png, mime_type="image/png"),
+        types.Part.from_bytes(data=style_png, mime_type="image/png"),
+    ]
+    if anchor_png is not None:
+        contents.append(types.Part.from_bytes(data=anchor_png, mime_type="image/png"))
 
     client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
         model=settings.gemini_image_model,
-        contents=[
-            prompt,
-            types.Part.from_bytes(data=canonical_png, mime_type="image/png"),
-            types.Part.from_bytes(data=style_png, mime_type="image/png"),
-        ],
+        contents=contents,
         config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
     )
 
