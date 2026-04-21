@@ -2459,7 +2459,10 @@
       const strip = picker.querySelector('.variant-options-strip');
       strip.innerHTML = '';
       for (let i = 0; i < VARIANT_OPTION_COUNT; i++) strip.appendChild(_newOptionSlot(i));
-      picker.style.display = '';
+      // CSS keeps the picker hidden by default and only shows it with `.active`.
+      // Setting inline display:'' just clears the override; the class rule still
+      // wins and the picker stays invisible. Use the class instead.
+      picker.classList.add('active');
 
       const btn = document.getElementById('btn-variant');
       btn.disabled = true;
@@ -2539,7 +2542,7 @@
       const modifiedFile = dataUrlToFile(dataUrl, `variant_${Date.now()}.png`);
       state.file = modifiedFile;
 
-      document.getElementById('variant-options').style.display = 'none';
+      document.getElementById('variant-options').classList.remove('active');
       document.getElementById('variant-input').value = '';
 
       show('generating');
