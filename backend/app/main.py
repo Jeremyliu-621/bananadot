@@ -313,47 +313,165 @@ async def _kit_event_stream(
     yield _sse("kit_done", {"source_component_type": source_component_type})
 
 
+@app.post("/kit/invent")
+async def kit_invent(
+    image: UploadFile = File(..., description="Source component image."),
+    source_component_type: ComponentType = Form(...),
+) -> JSONResponse:
+    """Phase 1 of the show-and-proceed kit flow.
+
+    For each OTHER component type, ask Gemini to invent a fresh standalone
+    PNG in the source's art style. One image in, one image out per target
+    — no primitives, no style-JSON bottleneck. Returns the PNGs so the
+    frontend can show them to the user and let them regenerate any that
+    look bad before moving on to phase 2.
+    """
+    raw = await _read_upload(image)
+    targets = [ct for ct in ALL_COMPONENT_TYPES if ct != source_component_type]
+
+    from app.pipeline import generate as gen
+
+    async def _invent_one(target: str) -> tuple[str, bytes | Exception]:
+        try:
+            png = await asyncio.to_thread(
+                gen.invent_source, raw, source_component_type, target,
+            )
+            return (target, png)
+        except Exception as e:
+            return (target, e)
+
+    results = await asyncio.gather(*[_invent_one(t) for t in targets])
+
+    sources: dict[str, str] = {}
+    errors: dict[str, str] = {}
+    for target, result in results:
+        if isinstance(result, Exception):
+            errors[target] = f"{type(result).__name__}: {result}"
+        else:
+            sources[target] = _as_data_url(result)
+
+    return JSONResponse({
+        "source_component_type": source_component_type,
+        "sources": sources,
+        "errors": errors,
+    })
+
+
+@app.post("/kit/invent/single")
+async def kit_invent_single(
+    image: UploadFile = File(..., description="Original source component image."),
+    source_component_type: ComponentType = Form(...),
+    component_type: ComponentType = Form(..., description="Target to regenerate."),
+) -> JSONResponse:
+    """Regenerate ONE invented source — re-runs invent for a single target."""
+    raw = await _read_upload(image)
+
+    from app.pipeline import generate as gen
+
+    png = await asyncio.to_thread(
+        gen.invent_source, raw, source_component_type, component_type,
+    )
+    return JSONResponse({
+        "component_type": component_type,
+        "source": _as_data_url(png),
+    })
+
+
+class KitFinalizeRequest(BaseModel):
+    sources: dict[str, str]
+
+
+@app.post("/kit/finalize")
+async def kit_finalize(body: KitFinalizeRequest) -> StreamingResponse:
+    """Phase 2 of the show-and-proceed kit flow.
+
+    Takes the invented sources (possibly after the user regenerated some)
+    and runs the standard /preview pipeline on each in sequence. Streams
+    SSE events with the same shape as /kit so the frontend can reuse its
+    existing kit-progress UI.
+
+    Accepts a JSON body (not form data) because stuffing three base64 PNGs
+    into one form part would hit Starlette's 1MB-per-part multipart limit.
+    """
+    source_map = body.sources
+    if not source_map:
+        raise HTTPException(status_code=400, detail="sources must be non-empty")
+
+    # Decode data URLs back to bytes for each target.
+    decoded: dict[str, bytes] = {}
+    for target, data_url in source_map.items():
+        if target not in ALL_COMPONENT_TYPES:
+            raise HTTPException(status_code=400, detail=f"Unknown component_type: {target}")
+        if not isinstance(data_url, str) or "," not in data_url:
+            raise HTTPException(status_code=400, detail=f"Invalid data URL for {target}")
+        try:
+            decoded[target] = base64.b64decode(data_url.split(",", 1)[1])
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Bad base64 for {target}: {e}")
+
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set; see .env.example")
+
+    return StreamingResponse(
+        _kit_finalize_stream(decoded),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _kit_finalize_stream(
+    sources: dict[str, bytes],
+) -> AsyncIterator[bytes]:
+    """Run the standard /preview pipeline on each invented source. SSE events
+    match /kit's schema so the frontend reuses the same handler."""
+    targets = list(sources.keys())
+    yield _sse("kit_started", {"targets": targets, "method": "invent"})
+
+    for target in targets:
+        yield _sse("component_started", {"component": target})
+        try:
+            cleaned, zip_bytes, is_pixel = await asyncio.to_thread(
+                _run_pipeline, sources[target], target,
+            )
+            yield _sse("component_completed", {
+                "component": target,
+                "is_pixel_art": is_pixel,
+                "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
+                "zip_base64": base64.b64encode(zip_bytes).decode("ascii"),
+                "zip_name": f"bananadot_{target}.zip",
+            })
+        except Exception as e:
+            yield _sse("component_failed", {
+                "component": target,
+                "error": f"{type(e).__name__}: {e}",
+            })
+
+    yield _sse("kit_done", {"method": "invent"})
+
+
 def _run_kit_pipeline(
     raw: bytes, target_component_type: str, shape_guidance: bool = True,
 ) -> tuple[dict[str, bytes], bytes, bool]:
-    """Like _run_pipeline, but passes the source as style_reference_png.
+    """Run generate_variants in kit_mode on `raw` as style source.
 
-    The source is a DIFFERENT component type from the target. It carries
-    the visual style Gemini should match (rendering, palette, detail) while
-    the target's own silhouette/shape is defined by the spec + Gemini's own
-    interpretation of 'what a panel looks like', etc.
+    The source is a DIFFERENT component type from the target. It's passed to
+    Gemini as a STYLE_FAMILY_REFERENCE only — the target's silhouette comes
+    from the spec's shape_profile injected as prose into the prompt.
     """
     from app.pipeline import bundle, cleanup, generate as gen, godot
 
     is_pixel = cleanup._looks_like_pixel_art_bytes_from_source(raw)
-    if shape_guidance:
-        # Two-pass: generate canonical (cached on disk) → restyle to match source.
-        # Gives Gemini a clean shape-only target for Pass 1 and a clean style
-        # transfer for Pass 2 instead of trying to juggle both at once.
-        variants = gen.generate_kit_variants(
-            source_png=raw,
-            component_type=target_component_type,
-        )
-        # Do NOT constrain kit variants to the source's dimensions — a
-        # progress_bar (7:1) rendered against a checkbox source (1:1) would
-        # get force-squished into a square. Let each target keep its own
-        # natural aspect ratio from the canonical. source_png still drives
-        # pixel-art detection / palette snapping.
-        cleaned = cleanup.normalize_variants(
-            variants, source_png=raw, use_source_dims=False,
-        )
-    else:
-        # Single-pass pure style transfer — user explicitly opted out of
-        # shape guidance, so they want the family to copy the source's
-        # silhouette (the 'quirky family' mode). Source dims still apply
-        # because the output IS expected to match the source's shape.
-        variants = gen.generate_variants(
-            source_png=raw,
-            component_type=target_component_type,
-            kit_mode=True,
-            shape_guidance=False,
-        )
-        cleaned = cleanup.normalize_variants(variants, source_png=raw)
+    variants = gen.generate_variants(
+        source_png=raw,
+        component_type=target_component_type,
+        kit_mode=True,
+        shape_guidance=shape_guidance,
+    )
+    # Do NOT constrain kit variants to the source's dimensions — a
+    # progress_bar (7:1) rendered against a checkbox source (1:1) would get
+    # force-squished into a square. Let each target keep its own natural
+    # aspect ratio. source_png still drives pixel-art detection + palette snap.
+    cleaned = cleanup.normalize_variants(variants, source_png=raw, use_source_dims=False)
     out_dir = godot.emit_component(
         component_type=target_component_type,
         variants=cleaned,

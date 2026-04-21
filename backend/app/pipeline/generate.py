@@ -37,13 +37,12 @@ Contract:
 
 from __future__ import annotations
 
-import functools
 import io
 import json
 from collections import Counter
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 from google import genai
 from google.genai import types
 
@@ -67,168 +66,68 @@ def load_spec(component_type: str) -> dict:
 # --- main entry ----------------------------------------------------------------
 
 
-CANONICALS_DIR = Path(__file__).parent.parent / "specs" / "canonicals"
-
-
-def generate_kit_variants(
+def invent_source(
     source_png: bytes,
-    component_type: str,
-) -> dict[str, bytes]:
-    """Two-pass kit generation with cross-state consistency chaining.
-
-    Pass 1 — canonical generation: run the full /preview pipeline on the
-    component's shape primitive (neutral grayscale). Cached on disk so we
-    only pay this cost once per component type, ever.
-
-    Pass 2 — style transfer: restyle each canonical to match the user's
-    source. The FIRST styled state is the consistency anchor for every
-    subsequent state — subsequent calls get that anchor as image 3 and
-    the prompt says "match image 3's rendering decisions exactly" (same
-    pattern we use inside /preview). This kills cross-state drift —
-    without it each Pass 2 call decides background/palette/line-weight
-    independently and e.g. empty ends up with a white plate while full
-    ends up transparent.
-
-    The result is a dict keyed by state name, PNG bytes. Same shape as
-    generate_variants so downstream cleanup/godot/bundle work unchanged.
-    """
-    canonicals = _load_or_build_canonicals(component_type)
-
-    results: dict[str, bytes] = {}
-    anchor_png: bytes | None = None
-    anchor_state: str | None = None
-
-    for state, canonical_png in canonicals.items():
-        styled = _apply_style_transfer(
-            canonical_png=canonical_png,
-            style_png=source_png,
-            component_type=component_type,
-            state=state,
-            anchor_png=anchor_png,
-            anchor_state=anchor_state,
-        )
-        results[state] = styled
-        if anchor_png is None:
-            anchor_png = styled
-            anchor_state = state
-    return results
-
-
-def _load_or_build_canonicals(component_type: str) -> dict[str, bytes]:
-    """Load canonical state PNGs for `component_type` from disk, or build them.
-
-    Canonicals are state-by-state Gemini outputs generated from the shape
-    primitive via the standard `generate_variants` path. They never depend on
-    user input so they're checked in once and reused forever.
-    """
-    spec = load_spec(component_type)
-    state_keys = list(spec["states"].keys())
-    type_dir = CANONICALS_DIR / component_type
-
-    # Try to load all states from disk. If any are missing, regenerate the set.
-    if type_dir.is_dir():
-        files = {p.stem: p.read_bytes() for p in type_dir.glob("*.png")}
-        if all(s in files for s in state_keys):
-            return {s: files[s] for s in state_keys}
-
-    # Cache miss — generate canonicals by running the standard pipeline on the
-    # shape primitive. The primitive is the only input; the spec + consistency
-    # chaining do the rest (same rigor as a normal /preview run).
-    primitive_png = _make_shape_reference_png(component_type)
-    fresh = generate_variants(
-        source_png=primitive_png,
-        component_type=component_type,
-        kit_mode=False,
-        shape_guidance=False,
-    )
-
-    # Persist for next time. Non-fatal if we can't (e.g. read-only FS on prod).
-    try:
-        type_dir.mkdir(parents=True, exist_ok=True)
-        for state, png in fresh.items():
-            (type_dir / f"{state}.png").write_bytes(png)
-    except OSError:
-        pass
-
-    return fresh
-
-
-def _apply_style_transfer(
-    *,
-    canonical_png: bytes,
-    style_png: bytes,
-    component_type: str,
-    state: str,
-    anchor_png: bytes | None = None,
-    anchor_state: str | None = None,
+    source_component_type: str,
+    target_component_type: str,
 ) -> bytes:
-    """Pass 2 — restyle a canonical component to match a style source.
+    """Ask Gemini to invent a fresh {target_component_type} in the source's style.
 
-    Two or three images in, one out:
-      image 1 = canonical  : silhouette + state-specific content (Pass 1 output)
-      image 2 = style_png  : art style (the user's source)
-      image 3 = anchor_png : previously-styled state of the same component
-                             (None for the first state, set thereafter).
-                             Locks cross-state rendering decisions — palette,
-                             line weight, background/alpha handling, edge
-                             treatment — so all states agree with each other.
+    Used as phase 1 of the show-and-proceed kit flow. The returned PNG is a
+    standalone component meant to be fed into the normal /preview pipeline
+    as the new source for state generation.
+
+    One image in (the user's upload), one image out. No primitives, no
+    style-JSON bottleneck. The target's `shape_profile` block from its
+    spec is injected as prose so Gemini has "what does a progress bar
+    look like" text to anchor on without a shape reference image that
+    could constrain its freedom.
     """
     from app.main import settings
 
-    with Image.open(io.BytesIO(canonical_png)) as c:
-        w, h = c.size
+    target_spec = load_spec(target_component_type)
+    sp = target_spec.get("shape_profile", {})
 
-    if anchor_png is None:
-        prompt = (
-            f"Restyle the first reference image (a {component_type} in its "
-            f"'{state}' state) to match the art style of the second reference "
-            "image. Preserve the first image's silhouette, content, structural "
-            "layout, and state-specific details EXACTLY. Only change the render "
-            "language: colour palette, line weight, edge treatment, level of "
-            "detail, and texture. The second image is a different UI component "
-            "type — take its STYLE, not its shape or subject.\n\n"
-            f"The output MUST be exactly {w}x{h} pixels. Keep the first image's "
-            "proportions and alpha behaviour. Do not add or remove any visible "
-            "elements."
+    shape_guidance_lines: list[str] = []
+    if sp.get("description"):
+        shape_guidance_lines.append(f"Description: {sp['description']}")
+    if sp.get("typical_aspect_ratio"):
+        shape_guidance_lines.append(f"Typical aspect ratio: {sp['typical_aspect_ratio']}")
+    if sp.get("required_visual_features"):
+        shape_guidance_lines.append(
+            "Required features: " + "; ".join(sp["required_visual_features"])
         )
-    else:
-        prompt = (
-            f"Restyle the first reference image (a {component_type} in its "
-            f"'{state}' state) to match the art style of the second reference "
-            "image, AND to be visually consistent with the third reference "
-            f"image (a previously-styled '{anchor_state}' state of the same "
-            f"{component_type}).\n\n"
-            "Image 1 (CANONICAL) — preserve its silhouette, content, structural "
-            "layout, and state-specific details EXACTLY.\n"
-            "Image 2 (STYLE SOURCE) — take ONLY art style cues from this: "
-            "colours, line weight, edge treatment, rendering technique. Do NOT "
-            "copy its shape or subject.\n"
-            "Image 3 (CONSISTENCY ANCHOR) — the previous styled state of this "
-            f"same {component_type}. Match its rendering decisions EXACTLY: "
-            "same palette, same stroke widths, same anti-aliasing behaviour, "
-            "same transparency handling (if image 3 has a transparent "
-            "background, so does the output; if it has an opaque plate, so "
-            "does the output), same edge treatment. Image 3 is the ground "
-            "truth for how image 2's style should look when applied. Do NOT "
-            "diverge from its rendering choices. The only difference between "
-            "this output and image 3 is the state-specific content from "
-            "image 1.\n\n"
-            f"The output MUST be exactly {w}x{h} pixels. Keep image 1's "
-            "proportions. Do not add or remove any visible elements."
+    if sp.get("must_not_look_like"):
+        shape_guidance_lines.append(
+            "Must NOT look like: " + "; ".join(sp["must_not_look_like"])
         )
+    shape_guidance = "\n".join(f"  - {line}" for line in shape_guidance_lines)
 
-    contents: list = [
-        prompt,
-        types.Part.from_bytes(data=canonical_png, mime_type="image/png"),
-        types.Part.from_bytes(data=style_png, mime_type="image/png"),
-    ]
-    if anchor_png is not None:
-        contents.append(types.Part.from_bytes(data=anchor_png, mime_type="image/png"))
+    prompt = (
+        f"Image 1 is a {source_component_type}. Produce a NEW "
+        f"{target_component_type} in the same art style.\n\n"
+        "MATCH image 1's: colour palette, line weight, rendering technique, "
+        "edge treatment, level of detail, texture, and overall visual "
+        "identity.\n\n"
+        f"DO NOT copy image 1's silhouette, subject, dimensions, or shape. "
+        f"The output is a {target_component_type} — a different component "
+        f"type from image 1. It must read as a {target_component_type} at "
+        "a glance, not as image 1 wearing a different label.\n\n"
+        f"Shape guidance for {target_component_type}:\n"
+        f"{shape_guidance}\n\n"
+        f"Output: a single standalone {target_component_type} rendered in "
+        "image 1's art style, against a transparent background unless "
+        "image 1 has an opaque plate (in which case match it). Do not "
+        "include any other UI element, text, caption, or framing."
+    )
 
     client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
         model=settings.gemini_image_model,
-        contents=contents,
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=source_png, mime_type="image/png"),
+        ],
         config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
     )
 
@@ -239,7 +138,7 @@ def _apply_style_transfer(
                 return bytes(inline.data)
 
     raise RuntimeError(
-        f"Style transfer returned no image for {component_type}/{state}"
+        f"Gemini returned no image for invented source: {target_component_type}"
     )
 
 
@@ -287,17 +186,13 @@ def generate_variants(
     for state, state_spec in spec["states"].items():
         # Every state goes through Gemini (no passthrough branch). See module docstring.
         if kit_mode:
-            # Kit mode always passes the user's source as STYLE_FAMILY_REFERENCE.
-            # When shape_guidance is on, ALSO prepend a neutral grey shape
-            # primitive as SHAPE_REFERENCE — giving Gemini the silhouette
-            # visually instead of trying to convey it with text alone.
-            image_refs: list[tuple[bytes, dict]] = []
-            if shape_guidance:
-                image_refs.append(
-                    (_make_shape_reference_png(component_type),
-                     _shape_reference_meta(component_type))
-                )
-            image_refs.append((source_png, _style_family_meta_for_kit(component_type)))
+            # Kit mode passes the user's source as STYLE_FAMILY_REFERENCE only.
+            # Shape semantics come from the target's `shape_profile` block
+            # injected into the prompt via _build_prompt, not from a primitive
+            # image — letting Gemini pick the silhouette preserves freedom.
+            image_refs: list[tuple[bytes, dict]] = [
+                (source_png, _style_family_meta_for_kit(component_type)),
+            ]
             if anchor_png is not None and runtime_ctx.get("consistency_anchor"):
                 image_refs.append((anchor_png, runtime_ctx["consistency_anchor"]))
         else:
@@ -440,85 +335,6 @@ def _style_family_meta() -> dict:
             "detail) but NOT its shape or subject — the current generation is "
             "for a different component entirely and must have its own correct "
             "silhouette, not this reference's."
-        ),
-    }
-
-
-# --- canonical shape references ---------------------------------------------
-# Small grayscale geometric primitives, one per component type. Neutral
-# style-wise on purpose — their only job in the prompt is to carry the
-# target's silhouette and aspect ratio. Gemini extracts SHAPE from them and
-# STYLE from the user's source (which is passed separately as
-# STYLE_FAMILY_REFERENCE). lru_cache keeps us from redrawing every request.
-
-
-@functools.lru_cache(maxsize=None)
-def _make_shape_reference_png(component_type: str) -> bytes:
-    """Render the canonical grayscale shape primitive for the target type."""
-    if component_type == "button":
-        w, h = 300, 100  # ~3:1, wider than tall
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        body = [4, 4, w - 4, h - 4]
-        try:
-            d.rounded_rectangle(body, radius=16, outline=(200, 200, 200), fill=(80, 80, 80), width=3)
-        except AttributeError:
-            d.rectangle(body, outline=(200, 200, 200), fill=(80, 80, 80), width=3)
-        d.rectangle([40, 30, w - 40, h - 30], outline=(200, 200, 200), width=1)
-    elif component_type == "checkbox":
-        w, h = 120, 120  # 1:1
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        d.rectangle([4, 4, w - 4, h - 4], outline=(200, 200, 200), fill=(80, 80, 80), width=4)
-    elif component_type == "progress_bar":
-        w, h = 420, 60  # 7:1, long and thin
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        d.rectangle([2, 2, w - 2, h - 2], outline=(200, 200, 200), fill=(48, 48, 48), width=3)
-        d.rectangle([8, 8, int(w * 0.6), h - 8], outline=None, fill=(160, 160, 160))
-    elif component_type == "panel":
-        w, h = 300, 240  # 5:4
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        d.rectangle([0, 0, w - 1, h - 1], outline=(220, 220, 220), fill=(48, 48, 48), width=2)
-        d.rectangle([30, 30, w - 30, h - 30], outline=(150, 150, 150), fill=(70, 70, 70), width=2)
-        d.rectangle([42, 42, w - 42, h - 42], outline=(210, 210, 210), fill=(96, 96, 96), width=1)
-    else:
-        w, h = 100, 100
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        d.rectangle([4, 4, w - 4, h - 4], outline=(200, 200, 200), fill=(80, 80, 80), width=2)
-
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def _shape_reference_meta(target_component_type: str) -> dict:
-    """Metadata for image_1 in kit + shape_guidance mode — the shape primitive."""
-    return {
-        "role": "SHAPE_REFERENCE",
-        "use_for": [
-            "silhouette",
-            "aspect_ratio",
-            "proportions",
-            "structural_role_and_affordances",
-        ],
-        "must_not_extract": [
-            "colors",
-            "textures",
-            "art_style",
-            "line_weight",
-            "visual_detail",
-            "rendering_technique",
-        ],
-        "critical_note": (
-            f"This is a NEUTRAL GRAYSCALE GEOMETRIC reference that shows the "
-            f"canonical SHAPE and aspect ratio of a {target_component_type}. "
-            f"Use ONLY its silhouette, proportions, and structural layout "
-            f"(e.g. where the label area / fill region / corners live). "
-            f"Do NOT use any of its colours, textures, or rendering style — "
-            f"those come from the STYLE_FAMILY_REFERENCE image (separate)."
         ),
     }
 

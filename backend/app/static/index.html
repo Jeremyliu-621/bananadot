@@ -11,17 +11,27 @@
 
   <style>
     :root {
-      --bg: #0a0a0a;
-      --fg: #ededed;
-      --muted: #888;
-      --faint: #4a4a4a;
-      --line: #1c1c1c;
-      --line-strong: #2a2a2a;
-      --accent: #f5c518;
+      --bg: #0f1420;
+      --fg: #f5f5f7;
+      --muted: #8a93a6;
+      --faint: #525a6b;
+      --line: #1e2636;
+      --line-strong: #2f394d;
+      --accent: #c74787;
+      --accent-rgb: 199, 71, 135;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
-    body { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5; font-weight: 400; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5; font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(circle at 50% -100px, rgba(var(--accent-rgb), 0.08), transparent 520px),
+        radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: auto, 22px 22px;
+      background-position: 0 0, 0 0;
+      background-attachment: fixed, fixed;
+    }
     .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
     a { color: inherit; text-decoration: none; }
@@ -32,25 +42,55 @@
       padding: 16px 32px;
       display: flex; align-items: center; justify-content: space-between;
     }
-    header .brand { font-weight: 500; letter-spacing: -0.01em; }
+    header .brand {
+      font-weight: 600; letter-spacing: -0.02em;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    header .brand::after {
+      content: "";
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.55);
+    }
     header nav { display: flex; gap: 20px; color: var(--muted); font-size: 13px; }
 
     main { max-width: 720px; margin: 0 auto; padding: 72px 32px; }
 
     /* Titles */
-    h1 { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; }
+    h1 { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+    #step-upload h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
+    #step-upload .lede { font-size: 15px; margin-bottom: 32px; }
     .lede { color: var(--muted); margin: 0 0 40px; }
-    .eyebrow { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .eyebrow {
+      color: var(--faint); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 14px; height: 2px;
+      background: var(--accent);
+      display: inline-block;
+      flex: 0 0 14px;
+    }
 
     /* Drop zone */
     .dropzone {
-      display: block; cursor: pointer;
+      display: block; cursor: pointer; position: relative;
       border: 1px dashed var(--line-strong);
-      padding: 56px 24px;
+      padding: 80px 24px;
       text-align: center;
-      transition: border-color .15s, background .15s;
+      transition: border-color .18s, background .18s, box-shadow .18s;
+      background: rgba(255,255,255,0.008);
     }
-    .dropzone:hover, .dropzone.dragging { border-color: var(--muted); background: rgba(255,255,255,0.01); }
+    .dropzone:hover, .dropzone.dragging {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.04);
+      box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.2), 0 0 40px rgba(var(--accent-rgb), 0.08);
+    }
     .dropzone .primary-line { font-size: 14px; color: var(--fg); }
     .dropzone .hint { color: var(--faint); font-size: 12px; margin-top: 6px; }
 
@@ -66,11 +106,24 @@
     }
     .btn:hover:not(:disabled) { opacity: 0.85; }
     .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-accent { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn-accent {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      transition: opacity .15s, box-shadow .18s, transform .1s;
+    }
+    .btn-accent:hover:not(:disabled) {
+      opacity: 1;
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 28px rgba(var(--accent-rgb), 0.38);
+    }
+    .btn-accent:active:not(:disabled) { transform: translateY(1px); }
     .btn-ghost {
       background: transparent; color: var(--muted); border: 1px solid var(--line-strong);
     }
     .btn-ghost:hover { color: var(--fg); border-color: var(--muted); }
+    .btn-lg {
+      height: 48px; padding: 0 22px;
+      font-size: 15px; font-weight: 600;
+      letter-spacing: 0.01em;
+    }
 
     /* Configure layout */
     .configure { display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: start; }
@@ -277,7 +330,7 @@
       margin-top: 8px;
       padding: 8px 10px;
       border: 1px solid var(--line-strong);
-      background: rgba(245, 197, 24, 0.06);
+      background: rgba(var(--accent-rgb), 0.06);
       color: var(--muted);
       font-size: 12px;
     }
@@ -317,7 +370,7 @@
     .option-slot .option-spinner {
       width: 18px; height: 18px;
       border-radius: 50%;
-      border: 2px solid rgba(245,197,24,0.25);
+      border: 2px solid rgba(var(--accent-rgb), 0.25);
       border-top-color: var(--accent);
       animation: spin 0.9s linear infinite;
       position: absolute;
@@ -337,7 +390,7 @@
       font-family: 'JetBrains Mono', monospace;
     }
     .option-slot.done .option-btn {
-      background: var(--accent); color: #000;
+      background: var(--accent); color: #fff;
       cursor: pointer;
     }
     .option-slot.done .option-btn:hover { filter: brightness(1.05); }
@@ -359,6 +412,32 @@
 
     .kit-progress { display: none; margin-top: 18px; flex-direction: column; gap: 10px; }
     .kit-progress.active { display: flex; }
+    .kit-invent-review { display: none; margin-top: 24px; flex-direction: column; gap: 12px; }
+    .kit-invent-review.active { display: flex; }
+    .kit-invent-intro { color: var(--muted); font-size: 13px; max-width: 640px; }
+    .kit-invent-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .kit-invent-card {
+      border: 1px solid var(--line);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--surface, transparent);
+    }
+    .kit-invent-card .kt-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+    .kit-invent-card .kt-preview {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      background: var(--bg-subtle, rgba(255,255,255,0.02));
+      border: 1px dashed var(--line);
+      min-height: 120px;
+    }
+    .kit-invent-card .kt-preview img { max-width: 85%; max-height: 85%; display: block; }
+    .pixel-art .kit-invent-card .kt-preview img { image-rendering: pixelated; }
+    .kit-invent-card.pending .kt-preview::after { content: 'working...'; color: var(--faint); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .kit-invent-card.failed .kt-preview::after { content: 'failed'; color: var(--danger, #f87171); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .kit-invent-card .kt-actions { display: flex; justify-content: flex-end; }
     .kit-row {
       display: grid;
       grid-template-columns: 110px 1fr 60px;
@@ -520,7 +599,7 @@
     }
     .kt-progress .kt-progress-fill {
       position: absolute; inset: 0;
-      background-image: var(--kt-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-image: var(--kt-progress-full, linear-gradient(90deg, var(--accent), #e679ad));
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
@@ -633,8 +712,8 @@
       max-width: 1000px;
       margin: 0 auto;
       background:
-        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
-        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+        radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.06), transparent 60%),
+        linear-gradient(180deg, #0a0f1a 0%, #05070e 100%);
       border: 1px solid var(--line-strong);
       overflow: hidden;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
@@ -668,7 +747,7 @@
     .mockup-top .mockup-progress-fill {
       position: absolute; inset: 0;
       width: 68%;
-      background-image: var(--mockup-progress-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-image: var(--mockup-progress-full, linear-gradient(90deg, var(--accent), #e679ad));
       background-size: auto 100%;
       background-repeat: no-repeat;
       clip-path: inset(0 32% 0 0);
@@ -839,7 +918,7 @@
     .mockup-tab.active {
       color: var(--accent);
       border-color: var(--accent);
-      background: rgba(245, 197, 24, 0.05);
+      background: rgba(var(--accent-rgb), 0.05);
     }
 
     /* HUD layout */
@@ -904,7 +983,7 @@
     }
     .hud-center {
       display: grid; place-items: center;
-      color: rgba(245, 197, 24, 0.45);
+      color: rgba(var(--accent-rgb), 0.45);
       font-size: 36px; font-family: monospace;
       user-select: none;
     }
@@ -951,7 +1030,7 @@
     .title-brand {
       font-size: 44px; font-weight: 700; letter-spacing: 0.03em;
       color: var(--fg);
-      text-shadow: 0 0 28px rgba(245, 197, 24, 0.3);
+      text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.3);
       font-family: 'Inter', system-ui, sans-serif;
     }
     .title-tagline {
@@ -1013,8 +1092,8 @@
       width: 100%;
       margin: 0 auto;
       background:
-        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
-        linear-gradient(180deg, #0e0e12, #050509);
+        radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.05), transparent 60%),
+        linear-gradient(180deg, #090e18, #05070e);
       border: 1px solid var(--line-strong);
       display: grid; place-items: center;
       overflow: hidden;
@@ -1152,7 +1231,7 @@
     }
     .pg-widget.pg-progress .pg-progress-fill {
       position: absolute; inset: 0;
-      background-image: var(--pg-full, linear-gradient(90deg, var(--accent), #ffd966));
+      background-image: var(--pg-full, linear-gradient(90deg, var(--accent), #e679ad));
       background-size: 100% 100%;
       background-repeat: no-repeat;
       clip-path: inset(0 calc(100% - var(--pg-progress, 50%)) 0 0);
@@ -1228,8 +1307,8 @@
       max-width: 900px; width: 100%;
       margin: 0 auto;
       background:
-        radial-gradient(ellipse at center, rgba(245,197,24,0.05), transparent 60%),
-        repeating-conic-gradient(#0e0e12 0% 25%, #13131a 0% 50%) 50% / 24px 24px;
+        radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.05), transparent 60%),
+        repeating-conic-gradient(#090e18 0% 25%, #0f1523 0% 50%) 50% / 24px 24px;
       border: 1px solid var(--line-strong);
       overflow: hidden;
       user-select: none;
@@ -1255,7 +1334,7 @@
       left: var(--compare-split, 50%);
       width: 2px;
       background: var(--accent);
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 16px rgba(245,197,24,0.35);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 16px rgba(var(--accent-rgb), 0.35);
       pointer-events: none;
       transition: left 0.05s linear;
     }
@@ -1266,8 +1345,8 @@
       width: 36px; height: 36px;
       border-radius: 50%;
       background: var(--accent);
-      border: 2px solid #0a0a0a;
-      color: #0a0a0a;
+      border: 2px solid var(--bg);
+      color: var(--bg);
       display: grid; place-items: center;
       font-size: 12px;
       box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(0,0,0,0.5);
@@ -1306,7 +1385,7 @@
     }
     .compare-state-chip:hover { color: var(--fg); border-color: var(--muted); }
     .compare-state-chip.active {
-      background: rgba(245, 197, 24, 0.08);
+      background: rgba(var(--accent-rgb), 0.08);
       color: var(--accent);
       border-color: var(--accent);
     }
@@ -1341,7 +1420,7 @@
       max-width: 960px; width: 100%;
       margin: 0 auto;
       border: 1px solid var(--line-strong);
-      background: #050509;
+      background: #05070e;
       display: grid; place-items: center;
       padding: 8px;
       min-height: 400px;
@@ -1350,7 +1429,7 @@
       display: block;
       width: 100%; max-width: 100%;
       height: auto;
-      background: #050509;
+      background: #05070e;
     }
     .poster-stage .poster-loading {
       color: var(--muted);
@@ -1400,8 +1479,8 @@
       max-width: 960px; width: 100%;
       margin: 0 auto;
       background:
-        radial-gradient(ellipse at center, rgba(245,197,24,0.06), transparent 60%),
-        linear-gradient(180deg, #0f0f14 0%, #050509 100%);
+        radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.06), transparent 60%),
+        linear-gradient(180deg, #0a0f1a 0%, #05070e 100%);
       border: 1px solid var(--line-strong);
       overflow: hidden;
       display: grid;
@@ -1503,7 +1582,7 @@
       font-weight: 600;
       color: var(--accent);
       animation: ld-float-up 0.9s ease-out forwards;
-      text-shadow: 0 0 12px rgba(245,197,24,0.5);
+      text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
     }
     @keyframes ld-float-up {
       0%   { opacity: 1; transform: translateY(0); }
@@ -1680,7 +1759,7 @@
     }
     .remix-state-chip:hover { color: var(--fg); border-color: var(--muted); }
     .remix-state-chip.active {
-      background: rgba(245, 197, 24, 0.08);
+      background: rgba(var(--accent-rgb), 0.08);
       color: var(--accent); border-color: var(--accent);
     }
 
@@ -1770,7 +1849,7 @@
           </div>
 
           <div class="actions">
-            <button id="btn-generate" class="btn btn-accent">Generate</button>
+            <button id="btn-generate" class="btn btn-accent btn-lg">Generate</button>
             <button id="btn-back-upload" class="btn btn-ghost">Use a different image</button>
             <span id="configure-eta" class="hint mono">~30s</span>
           </div>
@@ -1830,7 +1909,7 @@
         <span id="bundle-meta" class="bundle-meta mono">&mdash;</span>
         <div class="actions">
           <button id="btn-restart" class="btn btn-ghost">Start over</button>
-          <button id="btn-download" class="btn btn-accent">Download zip</button>
+          <button id="btn-download" class="btn btn-accent btn-lg">Download zip</button>
         </div>
       </div>
 
@@ -1873,17 +1952,24 @@
         </div>
         <div class="kit-actions">
           <button id="btn-kit" class="btn btn-accent">Generate matching kit</button>
-          <label class="kt-ctrl-row" style="margin-left:14px;">
-            <input id="kit-shape-guidance" type="checkbox" checked />
-            shape guidance
-          </label>
           <span class="variant-hint mono" style="margin-left:auto;">~2-3 min total</span>
         </div>
-        <div class="variant-hint mono" style="margin-top:8px; color:var(--faint); font-size:10px; max-width:600px;">
-          on (default): each target gets its own component-shape prior injected into the prompt
-          (buttons are wide, checkboxes are square, progress bars are long-and-thin, panels are
-          frame-shaped). off: pure style transfer &mdash; the family copies the reference's
-          silhouette more faithfully, even if it means a checkbox-shaped button.
+
+        <div id="kit-invent-review" class="kit-invent-review">
+          <!-- phase 1 review: invented sources before running state pipeline -->
+          <div class="eyebrow">step 1 &middot; invented sources</div>
+          <div class="kit-invent-intro">
+            Before generating state variants, bananadot invented a fresh source for each
+            component type in your upload's style. Regenerate any that don't look right,
+            then continue to generate state variants for each.
+          </div>
+          <div id="kit-invent-cards" class="kit-invent-cards">
+            <!-- one card per target (checkbox, progress_bar, panel) -->
+          </div>
+          <div class="kit-actions" style="margin-top:14px;">
+            <button id="btn-kit-continue" class="btn btn-accent btn-lg" disabled>Continue &rarr; generate state variants</button>
+            <button id="btn-kit-cancel" class="btn btn-ghost">Cancel</button>
+          </div>
         </div>
 
         <div id="kit-progress" class="kit-progress">
@@ -2568,6 +2654,12 @@
     // solid when it completes.
 
     document.getElementById('btn-kit').addEventListener('click', generateKit);
+    document.getElementById('btn-kit-continue').addEventListener('click', kitFinalize);
+    document.getElementById('btn-kit-cancel').addEventListener('click', kitCancelInvent);
+
+    // In-memory state for the show-and-proceed flow — holds the invented
+    // source PNGs (as data URLs) between phase 1 and phase 2.
+    const kitSession = { sources: {} };
 
     async function generateKit() {
       if (!state.file) {
@@ -2577,32 +2669,145 @@
       const sourceType = state.componentType;
       const btn = document.getElementById('btn-kit');
       btn.disabled = true;
-      btn.textContent = 'Generating...';
+      btn.textContent = 'Inventing sources...';
 
-      // Reset any previous kit run.
+      // Reset any previous kit state.
+      document.getElementById('kit-members').innerHTML = '';
+      const progressEl = document.getElementById('kit-progress');
+      progressEl.innerHTML = '';
+      progressEl.classList.remove('active');
+      kitResetInventReview();
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('source_component_type', sourceType);
+
+        const res = await fetch('/kit/invent', { method: 'POST', body: form });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        kitSession.sources = { ...(data.sources || {}) };
+        kitRenderInventReview(data);
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate matching kit';
+      }
+    }
+
+    function kitResetInventReview() {
+      const review = document.getElementById('kit-invent-review');
+      review.classList.remove('active');
+      document.getElementById('kit-invent-cards').innerHTML = '';
+      document.getElementById('btn-kit-continue').disabled = true;
+      kitSession.sources = {};
+    }
+
+    function kitRenderInventReview(data) {
+      const review = document.getElementById('kit-invent-review');
+      const cards = document.getElementById('kit-invent-cards');
+      cards.innerHTML = '';
+
+      const targets = Object.keys(data.sources || {});
+      const allTargets = [...targets, ...Object.keys(data.errors || {})];
+
+      for (const target of allTargets) {
+        const card = document.createElement('div');
+        card.className = 'kit-invent-card';
+        card.dataset.component = target;
+        const img = data.sources?.[target];
+        const err = data.errors?.[target];
+        card.innerHTML = `
+          <div class="kt-label">${target}</div>
+          <div class="kt-preview">${img ? `<img src="${img}" alt="${target}" />` : ''}</div>
+          <div class="kt-actions">
+            <button class="btn btn-ghost btn-kit-regen" data-component="${target}">regenerate</button>
+          </div>
+        `;
+        if (!img && err) card.classList.add('failed');
+        cards.appendChild(card);
+      }
+
+      cards.querySelectorAll('.btn-kit-regen').forEach(b => {
+        b.addEventListener('click', () => kitRegenOne(b.dataset.component));
+      });
+
+      review.classList.add('active');
+      document.getElementById('btn-kit-continue').disabled = Object.keys(kitSession.sources).length === 0;
+    }
+
+    async function kitRegenOne(component) {
+      if (!state.file) return;
+      const card = document.querySelector(`.kit-invent-card[data-component="${component}"]`);
+      if (!card) return;
+      const regenBtn = card.querySelector('.btn-kit-regen');
+      regenBtn.disabled = true;
+      regenBtn.textContent = 'working...';
+      card.classList.remove('failed');
+      card.classList.add('pending');
+      const preview = card.querySelector('.kt-preview');
+      preview.innerHTML = '';
+
+      try {
+        const form = new FormData();
+        form.append('image', state.file);
+        form.append('source_component_type', state.componentType);
+        form.append('component_type', component);
+
+        const res = await fetch('/kit/invent/single', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+        const data = await res.json();
+        kitSession.sources[component] = data.source;
+        preview.innerHTML = `<img src="${data.source}" alt="${component}" />`;
+        card.classList.remove('pending');
+      } catch (err) {
+        card.classList.remove('pending');
+        card.classList.add('failed');
+        showError(err.message || String(err));
+      } finally {
+        regenBtn.disabled = false;
+        regenBtn.textContent = 'regenerate';
+        document.getElementById('btn-kit-continue').disabled = Object.keys(kitSession.sources).length === 0;
+      }
+    }
+
+    function kitCancelInvent() {
+      kitResetInventReview();
+    }
+
+    async function kitFinalize() {
+      const sources = kitSession.sources;
+      if (!sources || Object.keys(sources).length === 0) return;
+
+      const continueBtn = document.getElementById('btn-kit-continue');
+      const cancelBtn = document.getElementById('btn-kit-cancel');
+      continueBtn.disabled = true;
+      continueBtn.textContent = 'Generating states...';
+      cancelBtn.disabled = true;
+
       document.getElementById('kit-members').innerHTML = '';
       const progressEl = document.getElementById('kit-progress');
       progressEl.innerHTML = '';
       progressEl.classList.remove('active');
 
       try {
-        const shapeGuidance = document.getElementById('kit-shape-guidance')?.checked ?? true;
-        const form = new FormData();
-        form.append('image', state.file);
-        form.append('source_component_type', sourceType);
-        form.append('shape_guidance', shapeGuidance ? 'true' : 'false');
-
-        const res = await fetch('/kit', { method: 'POST', body: form });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `HTTP ${res.status}`);
-        }
+        const res = await fetch('/kit/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sources }),
+        });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
         await parseSSE(res, handleKitEvent);
       } catch (err) {
         showError(err.message || String(err));
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Generate matching kit';
+        continueBtn.disabled = false;
+        continueBtn.textContent = 'Continue → generate state variants';
+        cancelBtn.disabled = false;
       }
     }
 
@@ -3094,7 +3299,7 @@
       if (src && Array.isArray(src.dominant_colors) && src.dominant_colors.length) {
         return src.dominant_colors.slice(0, 5);
       }
-      return ['#f5c518', '#ffd966', '#888888', '#26262d', '#050509'];
+      return ['#c74787', '#e679ad', '#888888', '#26262d', '#05070e'];
     }
 
     function _applyMockupTextures(stage, buttons, panelEntry, checkboxEntry, progressEntry) {
@@ -3518,15 +3723,15 @@
     function _drawPoster(ctx, entries, images, pixelArt) {
       // Background — same dark gradient feel as the app.
       const bg = ctx.createLinearGradient(0, 0, 0, POSTER_H);
-      bg.addColorStop(0, '#0f0f14');
-      bg.addColorStop(1, '#050509');
+      bg.addColorStop(0, '#0a0f1a');
+      bg.addColorStop(1, '#05070e');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, POSTER_W, POSTER_H);
 
       // Subtle accent radial glow near top.
       const glow = ctx.createRadialGradient(POSTER_W / 2, 0, 0, POSTER_W / 2, 0, POSTER_W * 0.6);
-      glow.addColorStop(0, 'rgba(245, 197, 24, 0.08)');
-      glow.addColorStop(1, 'rgba(245, 197, 24, 0)');
+      glow.addColorStop(0, 'rgba(199, 71, 135, 0.08)');
+      glow.addColorStop(1, 'rgba(199, 71, 135, 0)');
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, POSTER_W, POSTER_H);
 
@@ -3642,7 +3847,7 @@
       }
       // Fallback accent-led palette.
       if (out.length === 0) {
-        return ['#f5c518', '#ffd966', '#f5f5f7', '#888888', '#26262d', '#050509'];
+        return ['#c74787', '#e679ad', '#f5f5f7', '#888888', '#26262d', '#05070e'];
       }
       return out;
     }
