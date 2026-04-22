@@ -23,6 +23,9 @@ outputs/
 tmp/
 scratch/
 
+# Godot editor cache — regenerated on open
+godot_viewer/.godot/
+
 # OS / editor
 .DS_Store
 Thumbs.db

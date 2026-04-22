@@ -126,6 +126,20 @@
     .corner-bl { bottom: 22px; left: 18px;  }
     .corner-br { bottom: 22px; right: 18px; }
 
+    /* On non-landing screens, drop the horizontal strips and corners so the
+       decor becomes two clean vertical columns; extend those columns to span
+       the full viewport height (below the navbar → near the bottom edge). */
+    body:not(:has(#step-upload.active)) .side-rail-top,
+    body:not(:has(#step-upload.active)) .side-rail-bottom,
+    body:not(:has(#step-upload.active)) .corner-icon {
+      display: none;
+    }
+    body:not(:has(#step-upload.active)) .side-rail-left,
+    body:not(:has(#step-upload.active)) .side-rail-right {
+      top: 72px;
+      bottom: 24px;
+    }
+
     @media (max-width: 1160px) { .side-rail, .corner-icon { display: none; } }
 
     /* Game icon strip */
@@ -288,13 +302,33 @@
       padding: 32px 0; margin-bottom: 32px;
       border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
     }
-    .live-stage {
+    .live-preview-col {
       flex: 0 0 auto;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .preview-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--faint);
+    }
+    .live-stage {
       min-width: 120px;
       display: flex; align-items: center; justify-content: center;
     }
     .live-widget { display: none; }
     .live-widget.active { display: block; }
+
+    /* Godot engine iframe — real runtime next to the CSS approximation. */
+    .godot-stage {
+      width: 200px; height: 200px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .godot-stage iframe {
+      width: 100%; height: 100%;
+      border: 1px solid var(--line);
+      background: transparent;
+      display: block;
+    }
 
     .live-meta { flex: 1; }
     .live-meta .title { font-size: 13px; color: var(--fg); margin-bottom: 4px; }
@@ -2064,6 +2098,11 @@
       // Wait one frame so fixed-position rail geometry is measurable.
       requestAnimationFrame(populate);
 
+      // Expose so step transitions can re-space icons after the vertical rails
+      // expand/contract (CSS geometry changes, element count does not until we
+      // re-measure).
+      window.__repopulateDecorRails = populate;
+
       let t;
       window.addEventListener('resize', () => {
         clearTimeout(t);
@@ -2165,15 +2204,24 @@
       <div class="variants" id="variants-grid"></div>
 
       <div class="live-row">
-        <div class="live-stage">
-          <button id="live-button" class="live-widget live-button"></button>
-          <button id="live-checkbox" class="live-widget live-checkbox" data-checked="false" aria-pressed="false"></button>
-          <div id="live-panel" class="live-widget live-panel">
-            <div class="panel-sample-title">Panel content</div>
-            <div class="panel-sample-body">Stretches freely &mdash; corners stay crisp thanks to the 9-slice.</div>
+        <div class="live-preview-col">
+          <div class="preview-label">CSS</div>
+          <div class="live-stage">
+            <button id="live-button" class="live-widget live-button"></button>
+            <button id="live-checkbox" class="live-widget live-checkbox" data-checked="false" aria-pressed="false"></button>
+            <div id="live-panel" class="live-widget live-panel">
+              <div class="panel-sample-title">Panel content</div>
+              <div class="panel-sample-body">Stretches freely &mdash; corners stay crisp thanks to the 9-slice.</div>
+            </div>
+            <div id="live-progress" class="live-widget live-progress" style="--progress-pct: 50%;">
+              <div class="fill"></div>
+            </div>
           </div>
-          <div id="live-progress" class="live-widget live-progress" style="--progress-pct: 50%;">
-            <div class="fill"></div>
+        </div>
+        <div class="live-preview-col">
+          <div class="preview-label">Godot</div>
+          <div class="godot-stage">
+            <iframe id="godot-iframe" title="Godot engine preview"></iframe>
           </div>
         </div>
         <div class="live-meta">
@@ -2523,6 +2571,11 @@
 
     function show(step) {
       steps.forEach(s => document.getElementById('step-' + s).classList.toggle('active', s === step));
+      // Side rails change height between landing and other steps — re-space
+      // the icons so the vertical columns look evenly distributed.
+      if (typeof window.__repopulateDecorRails === 'function') {
+        requestAnimationFrame(window.__repopulateDecorRails);
+      }
     }
 
     // --- upload -------------------------------------------------------------
@@ -2653,6 +2706,57 @@
       // Bundle meta — zip name + size, no engine-specific copy.
       document.getElementById('bundle-meta').textContent =
         `${data.zip_name} · ${Math.ceil(data.zip_base64.length * 0.75 / 1024)} KB`;
+
+      // Godot embed — mirrors the CSS preview with a real engine.
+      updateGodotPreview(data);
+    }
+
+    // Godot embed — protocol is postMessage only. The iframe mounts on first
+    // use, then posts { kind: 'bananadot-ready' } back to us once its
+    // listener is installed; until then we stash the latest data. When ready
+    // arrives, we flush the stash. Later renders post immediately.
+    let _godotReady = false;
+    let _godotPending = null;
+
+    window.addEventListener('message', (e) => {
+      if (e && e.data && e.data.kind === 'bananadot-ready') {
+        _godotReady = true;
+        if (_godotPending) {
+          _sendGodotLoad(_godotPending);
+          _godotPending = null;
+        }
+      }
+    });
+
+    function _sendGodotLoad(data) {
+      const iframe = document.getElementById('godot-iframe');
+      if (!iframe || !iframe.contentWindow) return;
+      iframe.contentWindow.postMessage(
+        {
+          kind: 'load',
+          componentType: data.component_type,
+          pixel: data.is_pixel_art ? 1 : 0,
+          textures: data.variants,
+        },
+        '*',
+      );
+    }
+
+    function updateGodotPreview(data) {
+      if (!data || !data.variants) return;
+      const iframe = document.getElementById('godot-iframe');
+      if (!iframe) return;
+
+      if (!iframe.dataset.mounted) {
+        iframe.src = '/godot/viewer.html';
+        iframe.dataset.mounted = 'true';
+      }
+
+      if (_godotReady) {
+        _sendGodotLoad(data);
+      } else {
+        _godotPending = data;
+      }
     }
 
     function wireLiveWidget(data, spec) {

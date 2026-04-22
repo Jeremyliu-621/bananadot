@@ -7,11 +7,13 @@ import base64
 import io
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import AsyncIterator, Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 STATIC_DIR = Path(__file__).parent / "static"
+GODOT_DIR = STATIC_DIR / "godot"
 
 
 # --- schemas ------------------------------------------------------------------
@@ -68,21 +71,37 @@ def health() -> HealthResponse:
     )
 
 
-def _run_pipeline(raw: bytes, component_type: str) -> tuple[dict[str, bytes], bytes, bool]:
-    """Full pipeline. Returns (cleaned variants, zip bytes, is_pixel_art flag)."""
+def _run_pipeline(
+    raw: bytes, component_type: str, preview_id: str,
+) -> tuple[dict[str, bytes], bytes, bool, Path]:
+    """Full pipeline. Returns (cleaned variants, zip bytes, is_pixel_art, out_dir).
+
+    Outputs are scoped under `<output_dir>/<preview_id>/` so repeated or
+    concurrent generations don't clobber each other and the Godot viewer can
+    fetch stable URLs from `/previews/<preview_id>/bananadot_<type>/assets/`.
+    """
     from app.pipeline import bundle, cleanup, generate as gen, godot
 
     is_pixel = cleanup._looks_like_pixel_art_bytes_from_source(raw)  # best-effort metadata
     variants = gen.generate_variants(source_png=raw, component_type=component_type)
     cleaned = cleanup.normalize_variants(variants, source_png=raw)
+
+    session_dir = settings.output_dir / preview_id
+    session_dir.mkdir(parents=True, exist_ok=True)
     out_dir = godot.emit_component(
         component_type=component_type,
         variants=cleaned,
-        root=settings.output_dir,
+        root=session_dir,
         source_png=raw,
     )
     zip_bytes = bundle.zip_folder(out_dir)
-    return cleaned, zip_bytes, is_pixel
+    return cleaned, zip_bytes, is_pixel, out_dir
+
+
+def _asset_base_for(out_dir: Path) -> str:
+    """URL where the Godot viewer can fetch <state>.png textures over HTTP."""
+    rel = out_dir.relative_to(settings.output_dir).as_posix()
+    return f"/previews/{rel}/assets/"
 
 
 @app.post("/generate")
@@ -92,7 +111,7 @@ async def generate(
 ) -> StreamingResponse:
     """Pipeline, returns a zip bundle. Intended for CLI / curl consumers."""
     raw = await _read_upload(image)
-    _, zip_bytes, _ = _run_pipeline(raw, component_type)
+    _, zip_bytes, _, _ = _run_pipeline(raw, component_type, uuid.uuid4().hex)
     return StreamingResponse(
         io.BytesIO(zip_bytes),
         media_type="application/zip",
@@ -107,11 +126,14 @@ async def preview(
 ) -> JSONResponse:
     """Pipeline, returns JSON with base64 variants + zip. For the web UI."""
     raw = await _read_upload(image)
-    cleaned, zip_bytes, is_pixel = _run_pipeline(raw, component_type)
+    preview_id = uuid.uuid4().hex
+    cleaned, zip_bytes, is_pixel, out_dir = _run_pipeline(raw, component_type, preview_id)
     return JSONResponse(
         {
             "component_type": component_type,
             "is_pixel_art": is_pixel,
+            "preview_id": preview_id,
+            "asset_base": _asset_base_for(out_dir),
             "source": _as_data_url(raw),
             "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
             "zip_base64": base64.b64encode(zip_bytes).decode("ascii"),
@@ -149,13 +171,18 @@ async def variant(
     )
 
     # Phase 2: run the existing pipeline with the modified image as the new source.
-    cleaned, zip_bytes, is_pixel = _run_pipeline(modified_source, component_type)
+    preview_id = uuid.uuid4().hex
+    cleaned, zip_bytes, is_pixel, out_dir = _run_pipeline(
+        modified_source, component_type, preview_id,
+    )
 
     return JSONResponse(
         {
             "component_type": component_type,
             "is_pixel_art": is_pixel,
             "modification": modification,
+            "preview_id": preview_id,
+            "asset_base": _asset_base_for(out_dir),
             "original_source": _as_data_url(raw),
             "source": _as_data_url(modified_source),
             "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
@@ -270,8 +297,9 @@ async def kit(
     """
     raw = await _read_upload(image)
     targets = [ct for ct in ALL_COMPONENT_TYPES if ct != source_component_type]
+    preview_id = uuid.uuid4().hex
     return StreamingResponse(
-        _kit_event_stream(raw, source_component_type, targets, shape_guidance),
+        _kit_event_stream(raw, source_component_type, targets, shape_guidance, preview_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -282,23 +310,32 @@ async def _kit_event_stream(
     source_component_type: str,
     targets: list[str],
     shape_guidance: bool,
+    preview_id: str,
 ) -> AsyncIterator[bytes]:
-    """Yield SSE events as the kit generates. Each target runs sequentially."""
+    """Yield SSE events as the kit generates. Each target runs sequentially.
+
+    All targets share a single `preview_id` so the whole kit lives under one
+    folder in `/previews/<preview_id>/` and the frontend can cycle between
+    them in the Godot viewer via postMessage without re-minting IDs.
+    """
     yield _sse("kit_started", {
         "source_component_type": source_component_type,
         "targets": targets,
         "shape_guidance": shape_guidance,
+        "preview_id": preview_id,
     })
 
     for target in targets:
         yield _sse("component_started", {"component": target})
         try:
-            cleaned, zip_bytes, is_pixel = await asyncio.to_thread(
-                _run_kit_pipeline, raw, target, shape_guidance,
+            cleaned, zip_bytes, is_pixel, out_dir = await asyncio.to_thread(
+                _run_kit_pipeline, raw, target, preview_id, shape_guidance,
             )
             yield _sse("component_completed", {
                 "component": target,
                 "is_pixel_art": is_pixel,
+                "preview_id": preview_id,
+                "asset_base": _asset_base_for(out_dir),
                 "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
                 "zip_base64": base64.b64encode(zip_bytes).decode("ascii"),
                 "zip_name": f"bananadot_{target}.zip",
@@ -412,8 +449,9 @@ async def kit_finalize(body: KitFinalizeRequest) -> StreamingResponse:
     if not settings.gemini_api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set; see .env.example")
 
+    preview_id = uuid.uuid4().hex
     return StreamingResponse(
-        _kit_finalize_stream(decoded),
+        _kit_finalize_stream(decoded, preview_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -421,21 +459,32 @@ async def kit_finalize(body: KitFinalizeRequest) -> StreamingResponse:
 
 async def _kit_finalize_stream(
     sources: dict[str, bytes],
+    preview_id: str,
 ) -> AsyncIterator[bytes]:
     """Run the standard /preview pipeline on each invented source. SSE events
-    match /kit's schema so the frontend reuses the same handler."""
+    match /kit's schema so the frontend reuses the same handler.
+
+    All targets share one `preview_id` — outputs land under
+    `/previews/<preview_id>/` so the Godot viewer can address them via HTTP.
+    """
     targets = list(sources.keys())
-    yield _sse("kit_started", {"targets": targets, "method": "invent"})
+    yield _sse("kit_started", {
+        "targets": targets,
+        "method": "invent",
+        "preview_id": preview_id,
+    })
 
     for target in targets:
         yield _sse("component_started", {"component": target})
         try:
-            cleaned, zip_bytes, is_pixel = await asyncio.to_thread(
-                _run_pipeline, sources[target], target,
+            cleaned, zip_bytes, is_pixel, out_dir = await asyncio.to_thread(
+                _run_pipeline, sources[target], target, preview_id,
             )
             yield _sse("component_completed", {
                 "component": target,
                 "is_pixel_art": is_pixel,
+                "preview_id": preview_id,
+                "asset_base": _asset_base_for(out_dir),
                 "variants": {state: _as_data_url(b) for state, b in cleaned.items()},
                 "zip_base64": base64.b64encode(zip_bytes).decode("ascii"),
                 "zip_name": f"bananadot_{target}.zip",
@@ -450,13 +499,19 @@ async def _kit_finalize_stream(
 
 
 def _run_kit_pipeline(
-    raw: bytes, target_component_type: str, shape_guidance: bool = True,
-) -> tuple[dict[str, bytes], bytes, bool]:
+    raw: bytes,
+    target_component_type: str,
+    preview_id: str,
+    shape_guidance: bool = True,
+) -> tuple[dict[str, bytes], bytes, bool, Path]:
     """Run generate_variants in kit_mode on `raw` as style source.
 
     The source is a DIFFERENT component type from the target. It's passed to
     Gemini as a STYLE_FAMILY_REFERENCE only — the target's silhouette comes
     from the spec's shape_profile injected as prose into the prompt.
+
+    Outputs are scoped under `<output_dir>/<preview_id>/` so the Godot viewer
+    can fetch stable URLs via `/previews/<preview_id>/...`.
     """
     from app.pipeline import bundle, cleanup, generate as gen, godot
 
@@ -472,14 +527,17 @@ def _run_kit_pipeline(
     # force-squished into a square. Let each target keep its own natural
     # aspect ratio. source_png still drives pixel-art detection + palette snap.
     cleaned = cleanup.normalize_variants(variants, source_png=raw, use_source_dims=False)
+
+    session_dir = settings.output_dir / preview_id
+    session_dir.mkdir(parents=True, exist_ok=True)
     out_dir = godot.emit_component(
         component_type=target_component_type,
         variants=cleaned,
-        root=settings.output_dir,
+        root=session_dir,
         source_png=raw,
     )
     zip_bytes = bundle.zip_folder(out_dir)
-    return cleaned, zip_bytes, is_pixel
+    return cleaned, zip_bytes, is_pixel, out_dir
 
 
 def _sse(event: str, data: dict) -> bytes:
@@ -502,3 +560,19 @@ async def _read_upload(image: UploadFile) -> bytes:
 
 def _as_data_url(png: bytes) -> str:
     return f"data:image/png;base64,{base64.b64encode(png).decode('ascii')}"
+
+
+# --- static mounts (at the bottom so explicit routes above win on overlap) ----
+
+# Godot build artifact lives under STATIC_DIR/godot/ after Project → Export has
+# been run from godot_viewer/ — see godot_viewer/README.md. The WASM binary is
+# checked into git, so fresh clones just work. Re-export only when viewer.gd or
+# viewer.tscn change.
+GODOT_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/godot", StaticFiles(directory=GODOT_DIR, html=True), name="godot")
+
+# Per-generation preview artifacts (PNGs the Godot viewer fetches over HTTP).
+# Every /preview, /variant, /kit call scopes its outputs under a uuid4 preview_id
+# so concurrent generations don't clobber each other.
+settings.output_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/previews", StaticFiles(directory=settings.output_dir), name="previews")
