@@ -71,10 +71,6 @@
       padding: 40px 32px;
       text-align: center;
     }
-    body:has(#step-upload.active) #step-upload .eyebrow {
-      justify-content: center;
-    }
-
     /* --- Decor frame: pixel icons wrapping all four edges of the viewport,
        tucked below the navbar. Purely decorative, non-interactive. */
     .side-rail {
@@ -189,6 +185,34 @@
     }
     .dropzone .primary-line { font-size: 14px; color: var(--fg); }
     .dropzone .hint { color: var(--faint); font-size: 12px; margin-top: 6px; }
+
+    /* Sample quick-pick row. Populated at runtime from /samples-list; hidden
+       entirely when the directory is empty. Sits between the lede and the
+       dropzone so users see one-click options before the upload affordance. */
+    .samples { margin-bottom: 20px; }
+    .samples-row {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .sample-thumb {
+      width: 96px; height: 96px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .18s, background .18s, box-shadow .18s, transform .18s;
+      image-rendering: pixelated;
+    }
+    .sample-thumb:hover {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.06);
+      box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.25);
+      transform: translateY(-1px);
+    }
+    .sample-thumb img {
+      max-width: 80%; max-height: 80%;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
 
     /* Buttons */
     button { font: inherit; cursor: pointer; }
@@ -2115,12 +2139,14 @@
 
     <!-- upload -->
     <section id="step-upload" class="step active">
-      <div class="eyebrow">image &rarr; states</div>
       <h1>Drop a UI element.</h1>
-      <p class="lede">One cropped image in. Matching state variants (hover, pressed, disabled) out.</p>
+
+      <div id="samples" class="samples" hidden>
+        <div id="samples-row" class="samples-row"></div>
+      </div>
 
       <label id="dropzone" class="dropzone">
-        <div class="primary-line">Drop an image here, or click to browse.</div>
+        <div class="primary-line">Drop an image here, paste, or click to browse.</div>
         <div class="hint mono">PNG or JPG &middot; already cropped to the element</div>
         <input id="file-input" type="file" accept="image/*" hidden />
       </label>
@@ -2595,6 +2621,49 @@
       const file = e.target.files[0];
       if (file) handleFile(file);
     });
+    // Paste-to-upload: only when the upload step is active, and ignore pastes
+    // into text inputs so it doesn't hijack real typing.
+    window.addEventListener('paste', (e) => {
+      if (!document.getElementById('step-upload').classList.contains('active')) return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+      if (!item) return;
+      const file = item.getAsFile();
+      if (file) { e.preventDefault(); handleFile(file); }
+    });
+
+    // Quick-pick sample images. Backend returns filenames; clicking a thumb
+    // fetches the PNG, wraps it in a File, and feeds it into the normal flow.
+    (async () => {
+      try {
+        const res = await fetch('/samples-list');
+        if (!res.ok) return;
+        const { samples } = await res.json();
+        if (!samples || !samples.length) return;
+        const wrap = document.getElementById('samples');
+        const row = document.getElementById('samples-row');
+        samples.forEach((name, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'sample-thumb';
+          btn.title = `Sample ${i + 1}`;
+          const img = document.createElement('img');
+          img.src = `/samples/${encodeURIComponent(name)}`;
+          img.alt = `Sample ${i + 1}`;
+          btn.appendChild(img);
+          btn.addEventListener('click', async () => {
+            const r = await fetch(`/samples/${encodeURIComponent(name)}`);
+            if (!r.ok) { showError('Sample image failed to load.'); return; }
+            const blob = await r.blob();
+            const file = new File([blob], name, { type: blob.type || 'image/png' });
+            handleFile(file);
+          });
+          row.appendChild(btn);
+        });
+        wrap.hidden = false;
+      } catch {}
+    })();
 
     function handleFile(file) {
       if (!file.type.startsWith('image/')) { showError('That file is not an image.'); return; }

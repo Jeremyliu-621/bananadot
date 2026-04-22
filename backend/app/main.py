@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 settings = Settings()
 STATIC_DIR = Path(__file__).parent / "static"
 GODOT_DIR = STATIC_DIR / "godot"
+SAMPLES_DIR = STATIC_DIR / "samples"
 
 
 # --- schemas ------------------------------------------------------------------
@@ -76,6 +77,19 @@ def health() -> HealthResponse:
         model=settings.gemini_image_model,
         has_api_key=bool(settings.gemini_api_key),
     )
+
+
+@app.get("/samples-list")
+def samples_list() -> JSONResponse:
+    """List PNG/JPG files in the samples dir so the UI can render quick-pick thumbs."""
+    if not SAMPLES_DIR.is_dir():
+        return JSONResponse({"samples": []})
+    exts = {".png", ".jpg", ".jpeg", ".webp"}
+    names = sorted(
+        p.name for p in SAMPLES_DIR.iterdir()
+        if p.is_file() and p.suffix.lower() in exts
+    )
+    return JSONResponse({"samples": names})
 
 
 def _run_pipeline(
@@ -582,6 +596,16 @@ except OSError:
     pass
 if GODOT_DIR.is_dir():
     app.mount("/godot", StaticFiles(directory=GODOT_DIR, html=True), name="godot")
+
+# Sample images shown as quick-pick thumbnails on the upload screen. Drop any
+# PNG/JPG into backend/app/static/samples/ and they show up automatically via
+# /samples-list; the files themselves are served here.
+try:
+    SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+if SAMPLES_DIR.is_dir():
+    app.mount("/samples", StaticFiles(directory=SAMPLES_DIR), name="samples")
 
 # Per-generation preview artifacts (PNGs the Godot viewer fetches over HTTP).
 # Every /preview, /variant, /kit call scopes its outputs under a uuid4
