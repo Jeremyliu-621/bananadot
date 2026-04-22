@@ -30,7 +30,14 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
     gemini_image_model: str = "gemini-3-pro-image"
-    output_dir: Path = Path("/tmp/bananadot-outputs" if os.environ.get("VERCEL") else "./outputs")
+    # Vercel serverless filesystem is read-only except /tmp. Detect via
+    # VERCEL_ENV (runtime) or VERCEL (build) so the check works in both
+    # contexts — VERCEL alone is unset at runtime and caused a boot crash.
+    output_dir: Path = Path(
+        "/tmp/bananadot-outputs"
+        if os.environ.get("VERCEL_ENV") or os.environ.get("VERCEL")
+        else "./outputs"
+    )
 
 
 settings = Settings()
@@ -564,15 +571,26 @@ def _as_data_url(png: bytes) -> str:
 
 # --- static mounts (at the bottom so explicit routes above win on overlap) ----
 
-# Godot build artifact lives under STATIC_DIR/godot/ after Project → Export has
-# been run from godot_viewer/ — see godot_viewer/README.md. The WASM binary is
-# checked into git, so fresh clones just work. Re-export only when viewer.gd or
-# viewer.tscn change.
-GODOT_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/godot", StaticFiles(directory=GODOT_DIR, html=True), name="godot")
+# Godot build artifact lives under STATIC_DIR/godot/. The WASM binary is
+# checked into git so fresh clones (and the Vercel function bundle, via
+# `includeFiles` in vercel.json) just work. The mkdir is a no-op when the
+# directory is already present; try/except keeps the module import alive if
+# we ever land on a read-only FS where the dir can't be created.
+try:
+    GODOT_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+if GODOT_DIR.is_dir():
+    app.mount("/godot", StaticFiles(directory=GODOT_DIR, html=True), name="godot")
 
 # Per-generation preview artifacts (PNGs the Godot viewer fetches over HTTP).
-# Every /preview, /variant, /kit call scopes its outputs under a uuid4 preview_id
-# so concurrent generations don't clobber each other.
-settings.output_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/previews", StaticFiles(directory=settings.output_dir), name="previews")
+# Every /preview, /variant, /kit call scopes its outputs under a uuid4
+# preview_id so concurrent generations don't clobber each other. On Vercel
+# this is `/tmp/bananadot-outputs/` — writable but per-invocation, so the
+# mount is best-effort; clients should prefer the embedded data URLs in
+# responses over fetching via /previews/.
+try:
+    settings.output_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/previews", StaticFiles(directory=settings.output_dir), name="previews")
+except OSError:
+    pass
