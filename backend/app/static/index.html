@@ -44,19 +44,101 @@
     }
     header .brand {
       font-weight: 600; letter-spacing: -0.02em;
-      display: inline-flex; align-items: center; gap: 4px;
+      display: inline-flex; align-items: center; gap: 8px;
     }
-    header .brand::after {
-      content: "";
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: inline-block;
-      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.55);
+    .brand-logo {
+      width: 26px; height: auto;
+      display: block;
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+      filter: drop-shadow(0 2px 6px rgba(var(--accent-rgb), 0.35));
     }
     header nav { display: flex; gap: 20px; color: var(--muted); font-size: 13px; }
 
     main { max-width: 720px; margin: 0 auto; padding: 72px 32px; }
+
+    /* Vertically center the landing step under the navbar.
+       Only when #step-upload is the active step — other steps retain top alignment. */
+    body:has(#step-upload.active) main {
+      max-width: none;
+      padding: 0;
+      min-height: calc(100vh - 54px);
+      display: grid;
+      place-items: center;
+    }
+    body:has(#step-upload.active) #step-upload {
+      width: 100%;
+      max-width: 720px;
+      padding: 40px 32px;
+      text-align: center;
+    }
+    body:has(#step-upload.active) #step-upload .eyebrow {
+      justify-content: center;
+    }
+
+    /* --- Decor frame: pixel icons wrapping all four edges of the viewport,
+       tucked below the navbar. Purely decorative, non-interactive. */
+    .side-rail {
+      position: fixed;
+      display: flex;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      animation: rail-fade-in 0.9s ease-out 0.4s forwards;
+    }
+    @keyframes rail-fade-in { to { opacity: 1; } }
+
+    /* Vertical rails — span from below the top strip to above the bottom strip */
+    .side-rail-left, .side-rail-right {
+      top: 112px;
+      bottom: 72px;
+      width: 52px;
+      flex-direction: column;
+      justify-content: space-evenly;
+      align-items: center;
+    }
+    .side-rail-left  { left: 18px; }
+    .side-rail-right { right: 18px; }
+
+    /* Horizontal rails — run the full page width inside matching margins */
+    .side-rail-top, .side-rail-bottom {
+      left: 88px; right: 88px;
+      height: 40px;
+      flex-direction: row;
+      justify-content: space-evenly;
+      align-items: center;
+    }
+    .side-rail-top    { top: 64px; }
+    .side-rail-bottom { bottom: 22px; }
+
+    /* Corners — single icon anchored where the top/bottom strips and the side
+       columns would otherwise leave empty space. */
+    .corner-icon {
+      position: fixed;
+      width: 52px; height: 40px;
+      display: grid; place-items: center;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      animation: rail-fade-in 0.9s ease-out 0.4s forwards;
+    }
+    .corner-tl { top: 64px;    left: 18px;  }
+    .corner-tr { top: 64px;    right: 18px; }
+    .corner-bl { bottom: 22px; left: 18px;  }
+    .corner-br { bottom: 22px; right: 18px; }
+
+    @media (max-width: 1160px) { .side-rail, .corner-icon { display: none; } }
+
+    /* Game icon strip */
+    .game-icon {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      color: var(--muted);
+      opacity: 0.45;
+    }
+    .game-icon svg {
+      width: 28px; height: 28px; display: block;
+      image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+    }
 
     /* Titles */
     h1 { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
@@ -1787,12 +1869,208 @@
 <body>
 
   <header>
-    <div class="brand">bananadot</div>
+    <div class="brand">
+      <!-- Pixel-art banana: crescent body + stem + single magenta pixel that
+           IS the "dot" in bananadot. Logo first, wordmark second. -->
+      <svg class="brand-logo" viewBox="0 0 10 8" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="7" y="0" width="1" height="1" fill="#7b5e3a"/>
+        <rect x="5" y="1" width="4" height="1" fill="#ffca3a"/>
+        <rect x="4" y="2" width="5" height="1" fill="#ffca3a"/>
+        <rect x="3" y="3" width="5" height="1" fill="#ffca3a"/>
+        <rect x="2" y="4" width="5" height="1" fill="#ffca3a"/>
+        <rect x="1" y="5" width="5" height="1" fill="#ffca3a"/>
+        <rect x="0" y="6" width="5" height="1" fill="#ffca3a"/>
+        <rect x="0" y="7" width="3" height="1" fill="#ffca3a"/>
+        <rect x="3" y="5" width="1" height="1" fill="#c74787"/>
+      </svg>
+      <span class="brand-text">bananadot</span>
+    </div>
     <nav>
       <a href="/docs">API</a>
       <a href="/health">Status</a>
     </nav>
   </header>
+
+  <!-- Decorative side rails: pixel-art game icons flanking the page.
+       Hidden on narrow viewports via CSS. Purely for flavor. -->
+  <aside class="side-rail side-rail-left" aria-hidden="true">
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="7" y="1" width="2" height="2"/>
+        <rect x="6" y="3" width="4" height="8"/>
+        <rect x="3" y="11" width="10" height="1"/>
+        <rect x="2" y="12" width="12" height="1"/>
+        <rect x="7" y="13" width="2" height="2"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="4" y="2" width="8" height="2"/>
+        <rect x="3" y="4" width="10" height="6"/>
+        <rect x="4" y="10" width="8" height="2"/>
+        <rect x="5" y="12" width="6" height="1"/>
+        <rect x="6" y="13" width="4" height="1"/>
+        <rect x="7" y="14" width="2" height="1"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="6" y="1" width="4" height="2"/>
+        <rect x="7" y="3" width="2" height="2"/>
+        <rect x="5" y="5" width="6" height="1"/>
+        <rect x="4" y="6" width="8" height="7"/>
+        <rect x="5" y="13" width="6" height="1"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="10" y="5" width="4" height="1"/>
+        <rect x="9"  y="6" width="1" height="4"/>
+        <rect x="14" y="6" width="1" height="4"/>
+        <rect x="10" y="10" width="4" height="1"/>
+        <rect x="2"  y="7" width="8" height="2"/>
+        <rect x="2"  y="9" width="2" height="2"/>
+        <rect x="5"  y="9" width="1" height="2"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="4" y="2" width="8" height="1"/>
+        <rect x="3" y="3" width="10" height="2"/>
+        <rect x="2" y="5" width="12" height="2"/>
+        <rect x="3" y="7" width="10" height="1"/>
+        <rect x="5" y="4" width="2" height="1"/>
+        <rect x="9" y="3" width="2" height="1"/>
+        <rect x="6" y="8" width="4" height="5"/>
+        <rect x="5" y="13" width="6" height="1"/>
+      </svg>
+    </div>
+  </aside>
+
+  <aside class="side-rail side-rail-right" aria-hidden="true">
+    <!-- Pixel-art SVGs at 16x16 viewBox, scaled via CSS. -->
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="6" y="2" width="4" height="4"/>
+        <rect x="2" y="6" width="4" height="4"/>
+        <rect x="6" y="6" width="4" height="4"/>
+        <rect x="10" y="6" width="4" height="4"/>
+        <rect x="6" y="10" width="4" height="4"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="2" y="3" width="2" height="2"/>
+        <rect x="4" y="2" width="4" height="2"/>
+        <rect x="8" y="3" width="2" height="2"/>
+        <rect x="12" y="2" width="2" height="2"/>
+        <rect x="14" y="3" width="0" height="0"/>
+        <rect x="2" y="5" width="12" height="3"/>
+        <rect x="3" y="8" width="10" height="2"/>
+        <rect x="4" y="10" width="8" height="2"/>
+        <rect x="6" y="12" width="4" height="2"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="5" y="2" width="6" height="2"/>
+        <rect x="3" y="4" width="2" height="8"/>
+        <rect x="11" y="4" width="2" height="8"/>
+        <rect x="5" y="12" width="6" height="2"/>
+        <rect x="7" y="5" width="2" height="6"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="7" y="1" width="2" height="2"/>
+        <rect x="6" y="3" width="4" height="2"/>
+        <rect x="1" y="5" width="14" height="2"/>
+        <rect x="3" y="7" width="10" height="2"/>
+        <rect x="4" y="9" width="8" height="2"/>
+        <rect x="3" y="11" width="3" height="2"/>
+        <rect x="10" y="11" width="3" height="2"/>
+        <rect x="2" y="13" width="2" height="2"/>
+        <rect x="12" y="13" width="2" height="2"/>
+      </svg>
+    </div>
+    <div class="game-icon">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="4" y="2" width="8" height="2"/>
+        <rect x="2" y="4" width="12" height="2"/>
+        <rect x="3" y="6" width="10" height="2"/>
+        <rect x="4" y="8" width="8" height="2"/>
+        <rect x="5" y="10" width="6" height="2"/>
+        <rect x="6" y="12" width="4" height="2"/>
+        <rect x="7" y="14" width="2" height="1"/>
+      </svg>
+    </div>
+  </aside>
+
+  <!-- Top & bottom strips + four corners, populated by script below by cloning
+       from the left+right inline icons. The script also re-populates the
+       left/right rails so all four sides have matching visual density. -->
+  <aside class="side-rail side-rail-top"    aria-hidden="true"></aside>
+  <aside class="side-rail side-rail-bottom" aria-hidden="true"></aside>
+  <aside class="corner-icon corner-tl"      aria-hidden="true"></aside>
+  <aside class="corner-icon corner-tr"      aria-hidden="true"></aside>
+  <aside class="corner-icon corner-bl"      aria-hidden="true"></aside>
+  <aside class="corner-icon corner-br"      aria-hidden="true"></aside>
+  <script>
+    (function () {
+      // Snapshot the 10 inline source icons before anything clears them.
+      const sourcePool = Array.from(
+        document.querySelectorAll('.side-rail-left .game-icon, .side-rail-right .game-icon')
+      ).map((el) => el.outerHTML);
+      if (!sourcePool.length) return;
+
+      const rails = [
+        { el: document.querySelector('.side-rail-top'),    axis: 'w', offset: 0 },
+        { el: document.querySelector('.side-rail-bottom'), axis: 'w', offset: 4 },
+        { el: document.querySelector('.side-rail-left'),   axis: 'h', offset: 2 },
+        { el: document.querySelector('.side-rail-right'),  axis: 'h', offset: 7 },
+      ];
+
+      // Target center-to-center spacing. Same value for all rails so
+      // horizontal and vertical visually match regardless of viewport aspect.
+      const TARGET_SPACING = 78;
+
+      const corners = [
+        { sel: '.corner-tl', offset: 1 },
+        { sel: '.corner-tr', offset: 3 },
+        { sel: '.corner-bl', offset: 6 },
+        { sel: '.corner-br', offset: 9 },
+      ];
+
+      function populate() {
+        // Skip layout work when the rails are hidden.
+        if (window.innerWidth <= 1160) return;
+        for (const { el, axis, offset } of rails) {
+          if (!el) continue;
+          const len = axis === 'w' ? el.offsetWidth : el.offsetHeight;
+          if (!len) continue;
+          const count = Math.max(3, Math.round(len / TARGET_SPACING));
+          el.innerHTML = '';
+          for (let i = 0; i < count; i++) {
+            el.insertAdjacentHTML('beforeend', sourcePool[(i + offset) % sourcePool.length]);
+          }
+        }
+        for (const { sel, offset } of corners) {
+          const c = document.querySelector(sel);
+          if (!c) continue;
+          c.innerHTML = sourcePool[offset % sourcePool.length];
+        }
+      }
+
+      // Wait one frame so fixed-position rail geometry is measurable.
+      requestAnimationFrame(populate);
+
+      let t;
+      window.addEventListener('resize', () => {
+        clearTimeout(t);
+        t = setTimeout(populate, 120);
+      });
+    })();
+  </script>
 
   <main>
 
