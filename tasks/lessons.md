@@ -43,6 +43,47 @@ WHEN TO PRUNE
 
 _Newest first. Format: `### Title (YYYY-MM-DD)` then the rule + Why + How it applies._
 
+### Godot 4 web HTTPRequest silently drops callbacks — use postMessage + data URLs (2026-04-21)
+
+In the Godot 4.6 web export, `HTTPRequest.request()` fires (returns
+`RESULT_SUCCESS`) but the `request_completed` signal never emits for
+same-origin URLs the browser itself can `fetch()` fine. The texture is
+fetched somewhere in Emscripten-land but the Godot-side callback
+doesn't run. Hit this while building the Godot embed iframe for
+bananadot results.
+
+**Why:** We verified via `fetch()` in the parent page that the URL
+returned 200 with the correct MIME, and the textures were served from
+the SAME origin as the iframe. No CORS, no preflight, no redirect. The
+`err` from `http.request()` was 0. So it's a known/unfixed quirk of
+Godot's web `HTTPRequest` — not a configuration issue.
+
+**How to apply:** For the bananadot viewer and any future Godot 4 web
+iframe use-case, ship textures/bytes via `postMessage` from the parent
+frame as `data:image/png;base64,...` URLs and decode inline with
+`Marshalls.base64_to_raw` + `Image.load_png_from_buffer`. Avoid
+`HTTPRequest` entirely in web builds unless you're OK with debugging
+Godot internals. Bonus: this path also lets client-only features
+(recolor, canvas filters) show up in the Godot preview without a
+backend round-trip.
+
+### GDScript type inference breaks on `Dictionary.keys()` iteration (2026-04-21)
+
+`for key in my_dict.keys(): var x := base_str + key + ".png"` fails
+at parse time with "Cannot infer the type of 'x' variable because the
+value doesn't have a set type." The fix: cast inside the loop —
+`for key in my_dict.keys(): var s := String(key); var x := base_str + s + ".png"`.
+
+**Why:** `Dictionary.keys()` returns `Array[Variant]`. String + Variant
+has no statically-known type, so `:=` inference fails. Caught this
+shipping the bananadot Godot viewer — parse error broke the WASM load
+on browser.
+
+**How to apply:** Any time a GDScript for-loop binds a key/value from
+a Dictionary and you want typed locals downstream, cast the loop var
+to its concrete type on the first line of the loop. Or use untyped
+`var x = ...` if you really don't care.
+
 ### SSE for long Gemini operations, not polling or fake progress (2026-04-20)
 
 `/kit` and `/variant/options` return `StreamingResponse` with media type

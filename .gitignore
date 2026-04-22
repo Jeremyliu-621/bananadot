@@ -31,3 +31,5 @@ godot_viewer/.godot/
 Thumbs.db
 .idea/
 .vscode/
+
+.vercel
