@@ -66,6 +66,25 @@ def load_spec(component_type: str) -> dict:
 # --- main entry ----------------------------------------------------------------
 
 
+_INVENT_STATE_HINT: dict[str, str] = {
+    "checkbox": (
+        "State: CHECKED. Produce the checkbox with a clearly visible "
+        "checkmark or fill indicator inside the box. Invent the "
+        "checkmark's style to match image 1's art style (stroke weight, "
+        "edge treatment, anti-aliasing). A checked reference gives "
+        "phase 2 more visual signal than an empty box."
+    ),
+    "progress_bar": (
+        "State: HALF-FILLED. Produce the progress bar with approximately "
+        "50% of its track filled, showing BOTH the filled portion on the "
+        "left and the empty portion on the right. The boundary between "
+        "filled and empty must be clearly visible. A half-filled "
+        "reference carries both states' visual vocabulary in one image."
+    ),
+    # button, panel: no hint — Gemini produces the resting/default state.
+}
+
+
 def invent_source(
     source_png: bytes,
     source_component_type: str,
@@ -82,6 +101,11 @@ def invent_source(
     spec is injected as prose so Gemini has "what does a progress bar
     look like" text to anchor on without a shape reference image that
     could constrain its freedom.
+
+    For component types whose default state is visually bare (empty
+    checkbox, empty progress bar), an `_INVENT_STATE_HINT` bumps the
+    output to a richer state — checked / half-filled — so phase 2 has
+    more visual signal to anchor on.
     """
     from app.main import settings
 
@@ -103,6 +127,9 @@ def invent_source(
         )
     shape_guidance = "\n".join(f"  - {line}" for line in shape_guidance_lines)
 
+    state_hint = _INVENT_STATE_HINT.get(target_component_type, "")
+    state_hint_block = f"\n\n{state_hint}" if state_hint else ""
+
     prompt = (
         f"Image 1 is a {source_component_type}. Produce a NEW "
         f"{target_component_type} in the same art style.\n\n"
@@ -114,7 +141,8 @@ def invent_source(
         f"type from image 1. It must read as a {target_component_type} at "
         "a glance, not as image 1 wearing a different label.\n\n"
         f"Shape guidance for {target_component_type}:\n"
-        f"{shape_guidance}\n\n"
+        f"{shape_guidance}"
+        f"{state_hint_block}\n\n"
         f"Output: a single standalone {target_component_type} rendered in "
         "image 1's art style, against a transparent background unless "
         "image 1 has an opaque plate (in which case match it). Do not "
