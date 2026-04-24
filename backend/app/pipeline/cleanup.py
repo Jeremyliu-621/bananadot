@@ -5,12 +5,12 @@ Approach:
   2. Pick the target canvas size:
        - source_png provided → use source's own alpha-trimmed bbox.
          This is the canonical "logical size" the user cropped to, and it's
-         the only size that's invariant across Nano Banana's call-to-call
+         the only size that's invariant across the image model's call-to-call
          output resolution jitter.
        - no source_png → fall back to the max trimmed size across variants.
   3. Force-resize each trimmed variant to the target canvas dimensions.
      No aspect-ratio preservation — the JSON spec says "dimensions must
-     match reference exactly", and cleanup enforces that. If Gemini returns
+     match reference exactly", and cleanup enforces that. If the image model returns
      a slightly different aspect ratio, we stretch to fit rather than
      letterboxing (which caused the "hover is smaller than normal" bug).
      Resampling: nearest for pixel art, Lanczos otherwise.
@@ -87,7 +87,7 @@ def normalize_variants(
 
     # Force-resize each variant to the target canvas — no aspect-ratio
     # preservation. The JSON spec mandates "dimensions match reference exactly"
-    # and this is the enforcement layer. Any aspect-ratio mismatch from Gemini
+    # and this is the enforcement layer. Any aspect-ratio mismatch from the image model
     # is corrected here (slight stretch beats visible size differences).
     fitted = {
         state: _force_resize(img, target_w, target_h, resample=resample)
@@ -119,7 +119,7 @@ def _force_resize(
     """Resize img to exactly target_w × target_h. No aspect-ratio preservation.
 
     This is the enforcement side of "dimensions: match_reference_exactly" from
-    the JSON spec. If Gemini returned a slightly different aspect ratio, we
+    the JSON spec. If the image model returned a slightly different aspect ratio, we
     stretch to fit. For UI buttons where all states MUST overlay cleanly, exact
     size match is more important than perfect aspect ratio.
     """

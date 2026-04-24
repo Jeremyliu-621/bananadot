@@ -7,7 +7,7 @@ Image in → Godot UI component zip out. HTTP API.
 ```bash
 # one-time
 cp .env.example .env
-# put your Gemini API key in .env
+# put your OpenAI API key in .env
 
 # with uv (recommended)
 uv sync
@@ -34,7 +34,7 @@ Server runs on `http://127.0.0.1:8000`. Open `/docs` for the Swagger UI.
 app/
 ├── main.py              # FastAPI app + routes
 └── pipeline/
-    ├── generate.py      # Nano Banana calls for state variants
+    ├── generate.py      # OpenAI image-model calls for state variants
     ├── cleanup.py       # trim, align, pixel-art detect + snap
     ├── godot.py         # emit theme.tres / example.tscn / readme
     └── bundle.py        # zip the output folder

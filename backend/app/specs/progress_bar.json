@@ -1,19 +1,29 @@
 {
-  "task": "generate_ui_state_variant",
+  "task": "generate_progress_bar_layer",
   "component_type": "progress_bar",
+
+  "component_role_description": "A progress bar in Godot is built from TWO layered textures: `texture_under` (the track chrome — the frame and empty groove, always fully visible) and `texture_progress` (the fill material — a solid bar that the engine clips left-to-right based on the current progress value). The two outputs from this spec are those two textures, not two visual states of one whole progress bar. They will be composited together at runtime by the engine.",
 
   "reference_image": {
     "role": "STYLE_AND_SUBJECT_REFERENCE",
-    "use_for": ["art_style", "color_palette", "frame_silhouette", "proportions"],
+    "use_for": [
+      "art_style",
+      "color_palette",
+      "rendering_technique",
+      "line_weight_and_edge_treatment",
+      "proportions",
+      "frame_chrome_style_for_track_output",
+      "fill_material_style_for_fill_output"
+    ],
     "must_not_extract": ["background_or_surrounding_context"],
-    "critical_note": "The reference image IS the progress bar. Match its style and frame exactly."
+    "critical_note": "The reference shows a complete progress bar (frame + interior). DECOMPOSE it: the 'empty' output must contain ONLY the frame/chrome/groove from the reference, with nothing inside. The 'full' output must contain ONLY the fill material — a solid bar of the reference's progress colour/pattern — with NO frame around it. These are two separate texture layers Godot will composite, not two states of the same complete bar."
   },
 
   "output_constraints": {
     "dimensions": "match_reference_exactly",
-    "silhouette": "identical_to_reference",
-    "palette": "derived_from_reference_plus_state_adjustments_only",
-    "single_element": true,
+    "palette": "derived_from_reference",
+    "empty_output_contains": "frame, border, groove, and background ONLY — no fill, no indicator, no bar inside",
+    "full_output_contains": "solid fill material ONLY, matching the source's progress colour/pattern — no frame, no chrome, no border, no indicator graphics",
     "preserve_source_backgrounds_and_frames": true
   },
 
@@ -34,26 +44,31 @@
 
   "states": {
     "empty": {
-      "description": "Empty (0% filled) state: the outer frame with no fill inside.",
-      "modifications": {}
+      "description": "The TRACK CHROME by itself — the outer frame, border, and empty groove of the progress bar, with NOTHING inside it. This is the 'background' texture layer; Godot will composite a separate fill texture on top of it at runtime. DO NOT draw a bar, indicator, or fill of any kind inside the groove — leave the interior empty (transparent or matching the source's groove background). This is NOT 'a progress bar at 0%'; it is the frame in isolation.",
+      "modifications": {
+        "interior": "leave empty; no fill bar, no indicator, no progress content of any kind"
+      }
     },
     "full": {
-      "description": "Fully filled (100%) state: same outer frame, fill reaches the full width in a style matching the source art.",
+      "description": "The FILL MATERIAL by itself — a solid rectangular bar matching the source's progress colour, texture, and rendering style. NO frame, NO chrome, NO border around it. Same outer dimensions as the track for alignment purposes, but visually it is the fill material ALONE (Godot will clip this texture left-to-right to show progress; the track texture provides the frame around it). Think of it as 'the paint used to fill the bar,' rendered as a rectangle of the same size as the track.",
       "modifications": {
-        "fill": "100% width inside the frame"
+        "content": "solid fill bar in source's progress colour and rendering style; no frame, no chrome, no indicator"
       }
     }
   },
 
   "forbidden_content": [
-    "stripping or altering any backgrounds, frames, or borders that are visible in the source",
-    "changes to the outer frame between states",
-    "text, numbers, or percentage labels"
+    "drawing any fill, bar, indicator, or progress content inside the 'empty' output — it must be the frame and groove ONLY",
+    "drawing a frame, border, chrome, or groove around the 'full' output — it must be the fill material ONLY",
+    "text, numbers, or percentage labels",
+    "altering the source's art style, palette, rendering technique, or edge treatment"
   ],
 
   "priority_rules": [
-    "DIMENSIONS MUST match the reference image exactly",
-    "Outer frame SILHOUETTE must be identical between empty and full",
-    "Fill style must match the source art style"
+    "DIMENSIONS MUST match the reference image exactly — both outputs same size",
+    "The 'empty' output is the FRAME/TRACK ONLY — absolutely no fill content inside the groove",
+    "The 'full' output is the FILL MATERIAL ONLY — a solid bar of progress colour, no frame around it",
+    "Both outputs share the reference's art style, palette, line weight, and rendering technique exactly",
+    "The two outputs are separate texture layers, NOT before/after states of one whole bar"
   ]
 }

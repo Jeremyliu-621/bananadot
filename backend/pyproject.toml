@@ -9,7 +9,7 @@ dependencies = [
     "python-multipart>=0.0.12",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
-    "google-genai>=0.3",
+    "openai>=1.58",
     "pillow>=11.0",
 ]
 

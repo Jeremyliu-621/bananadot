@@ -1,11 +1,11 @@
-"""Call Nano Banana Pro to produce state variants of a UI element.
+"""Call OpenAI's image model (gpt-image-2) to produce state variants of a UI element.
 
 Design:
   - State definitions live in JSON spec files under `app/specs/<component>.json`,
     following ChatForce's structured-prompt pattern (task, reference_image roles,
     output_constraints, forbidden_content, priority_rules).
-  - The spec drives BOTH the Gemini prompt AND cleanup enforcement downstream.
-  - EVERY state goes through Gemini, including "normal". A previous iteration
+  - The spec drives BOTH the prompt AND cleanup enforcement downstream.
+  - EVERY state goes through the model, including "normal". A previous iteration
     treated "normal" as a source-passthrough, but that made it the odd one
     out — normal kept the source's original canvas/padding while the other
     states came back tightly trimmed, so they visibly differed in size.
@@ -20,7 +20,7 @@ Reference images (1, 2, or 3 per call, in this order):
            states must match its exact dimensions, rendering style, and
            level of detail.
   image_3 — STYLE_FAMILY_REFERENCE: present only during kit generation.
-           A different component in the visual style we want — Gemini copies
+           A different component in the visual style we want — the model copies
            its rendering language (art, palette, detail) but NOT its shape.
 
 Runtime context:
@@ -28,25 +28,68 @@ Runtime context:
   color palette, pixel-art flag) that get included in every prompt. The
   consistency-anchor block is added to this context after the first state.
 
+gpt-image-2 output dimensions:
+  The model accepts arbitrary sizes within these constraints — any multiples
+  of 16, long:short edge ratio ≤3:1, total pixels 655k–8.3M. We pick from a
+  small set of buckets closest to the source's aspect so cleanup's
+  force-resize back to source dims stays mild. Extreme aspects (e.g. a 10:1
+  progress bar) clamp to 3:1 (1536x512) — still far closer to source than
+  the near-square buckets gpt-image-1 was limited to.
+
 Contract:
     generate_variants(
         source_png, component_type,
-        style_reference_png=None,   # enables kit-generation mode
+        kit_mode=False, shape_guidance=True,
     ) -> dict[str, bytes]
 """
 
 from __future__ import annotations
 
+import base64
 import io
 import json
 from collections import Counter
 from pathlib import Path
 
 from PIL import Image
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
+
+# gpt-image-2 output size buckets — used everywhere we call images.edit.
+# All obey the model's constraints: multiples of 16, long:short ≤3:1, total
+# pixels in 655,360–8,294,400. 3:1 is the tightest-aspect bucket the model
+# allows; anything more elongated than 3:1 (e.g. a 10:1 progress bar) gets
+# clamped to this and cleanup does the rest.
+_SIZE_SQUARE = "1024x1024"       # 1:1
+_SIZE_LANDSCAPE = "1536x1024"    # 1.5:1
+_SIZE_PORTRAIT = "1024x1536"     # 1:1.5
+_SIZE_WIDE = "1536x512"          # 3:1
+_SIZE_TALL = "512x1536"          # 1:3
+
+# Per-component-type aspect hint used when we're inventing a fresh target in
+# kit mode / invent flow (we don't have concrete dims yet, so lean on the
+# spec's typical aspect via this table).
+_KIT_TARGET_SIZE: dict[str, str] = {
+    "button":       _SIZE_WIDE,       # shape_profile 2.5:1–5:1 → clamp at 3:1
+    "panel":        _SIZE_SQUARE,     # shape_profile 1:1–4:3
+    "checkbox":     _SIZE_SQUARE,     # 1:1
+    "progress_bar": _SIZE_WIDE,       # shape_profile 4:1–10:1 → clamp at 3:1
+}
+
+
+def _size_bucket_for_dims(w: int, h: int) -> str:
+    """Pick the gpt-image-2 output size closest to a requested aspect ratio."""
+    aspect = w / h if h else 1.0
+    if aspect >= 2.2:
+        return _SIZE_WIDE
+    if aspect >= 1.35:
+        return _SIZE_LANDSCAPE
+    if aspect <= 0.45:
+        return _SIZE_TALL
+    if aspect <= 0.74:
+        return _SIZE_PORTRAIT
+    return _SIZE_SQUARE
 
 
 # --- spec loading --------------------------------------------------------------
@@ -81,7 +124,7 @@ _INVENT_STATE_HINT: dict[str, str] = {
         "filled and empty must be clearly visible. A half-filled "
         "reference carries both states' visual vocabulary in one image."
     ),
-    # button, panel: no hint — Gemini produces the resting/default state.
+    # button, panel: no hint — the model produces the resting/default state.
 }
 
 
@@ -90,7 +133,7 @@ def invent_source(
     source_component_type: str,
     target_component_type: str,
 ) -> bytes:
-    """Ask Gemini to invent a fresh {target_component_type} in the source's style.
+    """Ask the model to invent a fresh {target_component_type} in the source's style.
 
     Used as phase 1 of the show-and-proceed kit flow. The returned PNG is a
     standalone component meant to be fed into the normal /preview pipeline
@@ -98,7 +141,7 @@ def invent_source(
 
     One image in (the user's upload), one image out. No primitives, no
     style-JSON bottleneck. The target's `shape_profile` block from its
-    spec is injected as prose so Gemini has "what does a progress bar
+    spec is injected as prose so the model has "what does a progress bar
     look like" text to anchor on without a shape reference image that
     could constrain its freedom.
 
@@ -149,24 +192,14 @@ def invent_source(
         "include any other UI element, text, caption, or framing."
     )
 
-    client = genai.Client(api_key=settings.gemini_api_key)
-    response = client.models.generate_content(
-        model=settings.gemini_image_model,
-        contents=[
-            prompt,
-            types.Part.from_bytes(data=source_png, mime_type="image/png"),
-        ],
-        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
-    )
-
-    for candidate in response.candidates or []:
-        for part in (candidate.content.parts if candidate.content else []) or []:
-            inline = getattr(part, "inline_data", None)
-            if inline and inline.data:
-                return bytes(inline.data)
-
-    raise RuntimeError(
-        f"Gemini returned no image for invented source: {target_component_type}"
+    client = OpenAI(api_key=settings.openai_api_key)
+    return _call_image_model(
+        client=client,
+        model=settings.openai_image_model,
+        prompt=prompt,
+        image_pngs=[source_png],
+        size=_KIT_TARGET_SIZE.get(target_component_type, _SIZE_SQUARE),
+        label=f"invented {target_component_type}",
     )
 
 
@@ -181,7 +214,7 @@ def generate_variants(
     Two modes:
 
     * Normal (`kit_mode=False`, default): the uploaded image IS the element
-      we're generating states for. Source is passed to Gemini as the
+      we're generating states for. Source is passed to the model as the
       STYLE_AND_SUBJECT reference — "make the hover/pressed/disabled states
       of THIS thing."
 
@@ -195,7 +228,7 @@ def generate_variants(
     `shape_guidance` only matters in kit mode. When True (default), the
     target's `shape_profile` block from its spec (typical aspect ratio,
     required visual features, what it must not look like) is injected into
-    the prompt so Gemini produces a proper button shape / panel frame /
+    the prompt so the model produces a proper button shape / panel frame /
     etc. Toggle off for pure style transfer — the family will copy the
     reference's silhouette more faithfully but may not read as the right
     component type.
@@ -205,19 +238,27 @@ def generate_variants(
     spec = load_spec(component_type)
     runtime_ctx = _analyze_source(source_png)
 
-    client = genai.Client(api_key=settings.gemini_api_key)
+    client = OpenAI(api_key=settings.openai_api_key)
     results: dict[str, bytes] = {}
+
+    # In kit mode the source is a DIFFERENT component type, so its dims don't
+    # describe what we're generating — fall back to the target's typical aspect.
+    if kit_mode:
+        size = _KIT_TARGET_SIZE.get(component_type, _SIZE_SQUARE)
+    else:
+        src = runtime_ctx["source_analysis"]
+        size = _size_bucket_for_dims(src["width"], src["height"])
 
     anchor_png: bytes | None = None
     anchor_state: str | None = None
 
     for state, state_spec in spec["states"].items():
-        # Every state goes through Gemini (no passthrough branch). See module docstring.
+        # Every state goes through the model (no passthrough branch). See module docstring.
         if kit_mode:
             # Kit mode passes the user's source as STYLE_FAMILY_REFERENCE only.
             # Shape semantics come from the target's `shape_profile` block
             # injected into the prompt via _build_prompt, not from a primitive
-            # image — letting Gemini pick the silhouette preserves freedom.
+            # image — letting the model pick the silhouette preserves freedom.
             image_refs: list[tuple[bytes, dict]] = [
                 (source_png, _style_family_meta_for_kit(component_type)),
             ]
@@ -244,12 +285,13 @@ def generate_variants(
             shape_guidance=shape_guidance,
         )
 
-        img_bytes = _call_nano_banana(
+        img_bytes = _call_image_model(
             client=client,
-            model=settings.gemini_image_model,
+            model=settings.openai_image_model,
             prompt=prompt,
             image_pngs=[png for png, _ in image_refs],
-            state=state,
+            size=size,
+            label=f"state={state!r}",
         )
         results[state] = img_bytes
 
@@ -371,7 +413,7 @@ def _style_family_meta_for_kit(target_component_type: str) -> dict:
     """Kit-mode metadata — the source image is ONLY a style guide.
 
     Emphatic `must_not_extract` and a per-component-type critical note so
-    Gemini can't drift back into 'just copy the reference'. This is the block
+    the model can't drift back into 'just copy the reference'. This is the block
     that fixes the 'upload a checkbox, get a button that IS the checkbox' bug.
     """
     return {
@@ -441,7 +483,7 @@ def _build_prompt(
 ) -> str:
     """Build the structured JSON prompt + human-readable preamble.
 
-    `image_refs` is the same list passed to _call_nano_banana; the prompt keys
+    `image_refs` is the same list passed to _call_image_model; the prompt keys
     each metadata block as image_1, image_2, ... in the same order.
     """
     src = runtime_ctx["source_analysis"]
@@ -476,7 +518,7 @@ def _build_prompt(
             ),
         }
         # When shape guidance is on, inject the target's shape_profile so
-        # Gemini has concrete geometric constraints (aspect ratio, required
+        # the model has concrete geometric constraints (aspect ratio, required
         # features, shapes to avoid). Purely shape/role info — no style
         # guidance — so it doesn't blunt the reference-driven art direction.
         if shape_guidance and "shape_profile" in spec:
@@ -597,35 +639,56 @@ def _build_preamble(
     return "\n".join(lines)
 
 
-# --- gemini call --------------------------------------------------------------
+# --- openai call --------------------------------------------------------------
 
 
-def _call_nano_banana(
+def _call_image_model(
     *,
-    client: genai.Client,
+    client: OpenAI,
     model: str,
     prompt: str,
     image_pngs: list[bytes],
-    state: str,
+    size: str = "auto",
+    label: str = "image",
 ) -> bytes:
-    """One generation call. Images are attached in the order given."""
-    contents: list = [prompt]
-    for png in image_pngs:
-        contents.append(types.Part.from_bytes(data=png, mime_type="image/png"))
+    """One image-edit call. Images are attached in the order given.
 
-    response = client.models.generate_content(
+    `size` is one of the aspect buckets defined above. gpt-image-2 honours
+    the requested size (multiples of 16, long:short ≤3:1) — the spec
+    template still asks for source-exact pixel dims in the prompt text,
+    but cleanup's force-resize corrects any remaining mismatch downstream.
+
+    `label` is a short human-readable tag ("state='hover'",
+    "invented button", "modification") that shows up in error messages.
+    """
+    if not image_pngs:
+        raise ValueError("image_pngs must be non-empty")
+
+    image_files: list[io.BytesIO] = []
+    for i, png in enumerate(image_pngs):
+        bio = io.BytesIO(png)
+        # The SDK inspects `.name` to infer the MIME type. Without it,
+        # multi-image requests fail with "image must be a PNG/WEBP/JPEG".
+        bio.name = f"ref_{i}.png"
+        image_files.append(bio)
+
+    # images.edit accepts a single file-like OR a list. Pass the right shape
+    # so n=1 calls with one reference image don't trigger a multi-image path.
+    image_arg = image_files[0] if len(image_files) == 1 else image_files
+
+    response = client.images.edit(
         model=model,
-        contents=contents,
-        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+        image=image_arg,
+        prompt=prompt,
+        n=1,
+        size=size,
     )
 
-    for candidate in response.candidates or []:
-        for part in (candidate.content.parts if candidate.content else []) or []:
-            inline = getattr(part, "inline_data", None)
-            if inline and inline.data:
-                return bytes(inline.data)
+    for item in response.data or []:
+        if getattr(item, "b64_json", None):
+            return base64.b64decode(item.b64_json)
 
-    raise RuntimeError(f"Nano Banana returned no image for state={state!r}")
+    raise RuntimeError(f"OpenAI returned no image for {label}")
 
 
 # --- variant feature ----------------------------------------------------------
@@ -669,20 +732,12 @@ def apply_modification(
         "or detail emphasis) while still obeying all constraints above."
     ) if variation_label else base_prompt
 
-    client = genai.Client(api_key=settings.gemini_api_key)
-    response = client.models.generate_content(
-        model=settings.gemini_image_model,
-        contents=[
-            prompt,
-            types.Part.from_bytes(data=source_png, mime_type="image/png"),
-        ],
-        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+    client = OpenAI(api_key=settings.openai_api_key)
+    return _call_image_model(
+        client=client,
+        model=settings.openai_image_model,
+        prompt=prompt,
+        image_pngs=[source_png],
+        size=_size_bucket_for_dims(src_w, src_h),
+        label=f"modification={modification.strip()[:40]!r}",
     )
-
-    for candidate in response.candidates or []:
-        for part in (candidate.content.parts if candidate.content else []) or []:
-            inline = getattr(part, "inline_data", None)
-            if inline and inline.data:
-                return bytes(inline.data)
-
-    raise RuntimeError("Nano Banana returned no image for the modification step")

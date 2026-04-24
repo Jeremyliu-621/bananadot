@@ -28,8 +28,8 @@ ALL_COMPONENT_TYPES: tuple[str, ...] = ("button", "panel", "checkbox", "progress
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    gemini_api_key: str = ""
-    gemini_image_model: str = "gemini-3-pro-image"
+    openai_api_key: str = ""
+    openai_image_model: str = "gpt-image-2"
     # Vercel serverless filesystem is read-only except /tmp. Detect via
     # VERCEL_ENV (runtime) or VERCEL (build) so the check works in both
     # contexts — VERCEL alone is unset at runtime and caused a boot crash.
@@ -74,8 +74,8 @@ def index() -> FileResponse:
 def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        model=settings.gemini_image_model,
-        has_api_key=bool(settings.gemini_api_key),
+        model=settings.openai_image_model,
+        has_api_key=bool(settings.openai_api_key),
     )
 
 
@@ -172,7 +172,7 @@ async def variant(
     """Create a variant of an existing component by applying a text modification.
 
     Two-phase pipeline:
-      1. Gemini applies the modification to the source (e.g. START -> STOP).
+      1. the image model applies the modification to the source (e.g. START -> STOP).
       2. The modified image becomes the source for the regular /preview pipeline
          (generate state variants, cleanup, package).
 
@@ -260,7 +260,7 @@ async def _variant_options_stream(
     for i in range(count):
         yield _sse("option_started", {"index": i})
 
-    # Fire all N Gemini calls in parallel via threadpool.
+    # Fire all N the image model calls in parallel via threadpool.
     async def run_one(i: int) -> tuple[int, bytes | Exception]:
         try:
             png = await asyncio.to_thread(
@@ -298,14 +298,14 @@ async def kit(
         ..., description="What the uploaded component is (button, panel, checkbox, progress_bar).",
     ),
     shape_guidance: bool = Form(
-        True, description="Inject the target's shape_profile (aspect ratio, required features) to steer Gemini toward the right component shape. Turn off for pure style-copying if you want quirky matching silhouettes.",
+        True, description="Inject the target's shape_profile (aspect ratio, required features) to steer the image model toward the right component shape. Turn off for pure style-copying if you want quirky matching silhouettes.",
     ),
 ) -> StreamingResponse:
     """Generate matching components of every OTHER type in the source's style.
 
     Streams Server-Sent Events as each target component completes. Events:
       kit_started          — carries the list of target component types
-      component_started    — one per target, emitted before its Gemini run
+      component_started    — one per target, emitted before its the image model run
       component_completed  — one per target, carries the full variant payload
       component_failed     — if a single target fails (rest still run)
       kit_done             — terminal event, carries summary
@@ -313,7 +313,7 @@ async def kit(
     The source image is passed into each target pipeline as the
     STYLE_FAMILY_REFERENCE (kit_mode=True). When `shape_guidance` is on, the
     target's shape_profile from its spec is also injected into the prompt so
-    Gemini produces the right silhouette for the component type, not just
+    the image model produces the right silhouette for the component type, not just
     the reference's silhouette.
     """
     raw = await _read_upload(image)
@@ -378,7 +378,7 @@ async def kit_invent(
 ) -> JSONResponse:
     """Phase 1 of the show-and-proceed kit flow.
 
-    For each OTHER component type, ask Gemini to invent a fresh standalone
+    For each OTHER component type, ask the image model to invent a fresh standalone
     PNG in the source's art style. One image in, one image out per target
     — no primitives, no style-JSON bottleneck. Returns the PNGs so the
     frontend can show them to the user and let them regenerate any that
@@ -467,8 +467,8 @@ async def kit_finalize(body: KitFinalizeRequest) -> StreamingResponse:
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Bad base64 for {target}: {e}")
 
-    if not settings.gemini_api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set; see .env.example")
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set; see .env.example")
 
     preview_id = uuid.uuid4().hex
     return StreamingResponse(
@@ -528,7 +528,7 @@ def _run_kit_pipeline(
     """Run generate_variants in kit_mode on `raw` as style source.
 
     The source is a DIFFERENT component type from the target. It's passed to
-    Gemini as a STYLE_FAMILY_REFERENCE only — the target's silhouette comes
+    the image model as a STYLE_FAMILY_REFERENCE only — the target's silhouette comes
     from the spec's shape_profile injected as prose into the prompt.
 
     Outputs are scoped under `<output_dir>/<preview_id>/` so the Godot viewer
@@ -571,8 +571,8 @@ def _sse(event: str, data: dict) -> bytes:
 
 
 async def _read_upload(image: UploadFile) -> bytes:
-    if not settings.gemini_api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set; see .env.example")
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set; see .env.example")
     raw = await image.read()
     if not raw:
         raise HTTPException(status_code=400, detail="Empty image upload")
